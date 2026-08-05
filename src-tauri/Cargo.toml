@@ -1,7 +1,7 @@
 [package]
 name = "komtap"
 version = "0.1.0"
-description = "Komtap - Gestión de tienda de ropa (proveedores, inventario, ventas y contabilidad)"
+description = "Komtap - Gestión de proveedores, inventario, ventas y contabilidad"
 authors = ["you"]
 edition = "2021"
 

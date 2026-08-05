@@ -1,48 +1,49 @@
-import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { ActivarLicencia } from "./shell/components/auth/ActivarLicencia";
+import { Login } from "./shell/components/auth/Login";
+import { RegistrarUsuario } from "./shell/components/auth/RegistrarUsuario";
+import { Dashboard } from "./shell/components/dashboard/Dashboard";
+import { AppShell } from "./shell/components/layout/AppShell";
+import { AuthProvider, useAuth } from "./shell/context/AuthContext";
 
-type EstadoLicencia = {
-  activa: boolean;
-  tipo_licencia: string | null;
-  fecha_expiracion: string | null;
-};
+function FlujoPrincipal() {
+  const { fase, error } = useAuth();
 
-/**
- * Punto de entrada de la interfaz. Aquí solo se resuelve el flujo mínimo de
- * arranque descrito en HU-11 (licencia -> registro de usuario único -> login).
- * Las pantallas de cada módulo (proveedores, inventario, ventas, gastos,
- * dashboard) se agregan como componentes en src/components/.
- */
+  switch (fase) {
+    case "cargando":
+      return <div className="centered-screen">Verificando licencia…</div>;
+    case "licencia_inactiva":
+      return (
+        <div className="centered-screen">
+          {error && <p className="form-error">{error}</p>}
+          <ActivarLicencia />
+        </div>
+      );
+    case "requiere_registro":
+      return (
+        <div className="centered-screen">
+          <RegistrarUsuario />
+        </div>
+      );
+    case "requiere_login":
+      return (
+        <div className="centered-screen">
+          <Login />
+        </div>
+      );
+    case "autenticado":
+      return (
+        <AppShell>
+          <Dashboard />
+        </AppShell>
+      );
+  }
+}
+
 function App() {
-  const [licencia, setLicencia] = useState<EstadoLicencia | null>(null);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    invoke<EstadoLicencia>("estado_licencia")
-      .then(setLicencia)
-      .catch((e) => setError(String(e)))
-      .finally(() => setCargando(false));
-  }, []);
-
   return (
-    <div className="app-shell">
-      <header className="app-header">
-        <h1>Komtap</h1>
-      </header>
-      <main className="app-content">
-        {cargando && <p>Verificando licencia…</p>}
-        {error && <p style={{ color: "crimson" }}>{error}</p>}
-        {!cargando && !error && licencia && (
-          <p>
-            Licencia {licencia.activa ? "activa" : "inactiva"}
-            {licencia.tipo_licencia ? ` (${licencia.tipo_licencia})` : ""}
-          </p>
-        )}
-        {/* TODO: enrutar a Activación de licencia / Registro / Login / Dashboard
-            según el estado devuelto por `estado_licencia` y `existe_usuario_registrado`. */}
-      </main>
-    </div>
+    <AuthProvider>
+      <FlujoPrincipal />
+    </AuthProvider>
   );
 }
 

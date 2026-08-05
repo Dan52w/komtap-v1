@@ -166,8 +166,7 @@ CREATE TRIGGER IF NOT EXISTS trg_descontar_stock_venta
 AFTER INSERT ON items_venta
 BEGIN
     UPDATE productos
-    SET stock_actual = stock_actual - NEW.cantidad,
-        updated_at = CURRENT_TIMESTAMP
+    SET stock_actual = stock_actual - NEW.cantidad, updated_at = CURRENT_TIMESTAMP
     WHERE id = NEW.producto_id;
 END;
 
@@ -191,14 +190,6 @@ BEGIN
     SET stock_actual = stock_actual + OLD.cantidad,
         updated_at = CURRENT_TIMESTAMP
     WHERE id = OLD.producto_id;
-END;
-
-CREATE TRIGGER IF NOT EXISTS trg_descontar_stock_venta
-AFTER INSERT ON items_venta
-BEGIN
-    UPDATE productos
-    SET stock_actual = stock_actual - NEW.cantidad, updated_at = CURRENT_TIMESTAMP
-    WHERE id = NEW.producto_id;
 END;
 
 -- ============================================================================
