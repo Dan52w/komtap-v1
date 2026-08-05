@@ -6,6 +6,8 @@ import type {
   ProductoCritico,
   Periodo,
 } from "../types/reportes";
+import type { Producto, FiltroProductos } from "../types/productos";
+import type { TopPrenda } from "../types/ventas";
 
 /**
  * Wrapper delgado sobre `invoke`. Cada comando Rust falla con un `String`
@@ -57,4 +59,32 @@ export const reportes = {
 
 export const proveedores = {
   deudaTotalGlobal: () => invoke<number>("deuda_total_global"),
+};
+
+// ===== Inventario / productos (HU-04) =====
+
+export const productos = {
+  listar: (filtro?: FiltroProductos) =>
+    invoke<Producto[]>("listar_productos", { filtro: filtro ?? null }),
+
+  crear: (producto: Producto) => invoke<number>("crear_producto", { producto }),
+
+  actualizar: (producto: Producto) =>
+    invoke<void>("actualizar_producto", { producto }),
+
+  ajustarStock: (params: { productoId: number; delta: number; motivo: string }) =>
+    invoke<number>("ajustar_stock_manual", params),
+
+  eliminar: (productoId: number) =>
+    invoke<void>("eliminar_producto", { productoId }),
+};
+
+// ===== Ventas (solo el ranking por ahora, HU-05) =====
+
+export const ventas = {
+  topPrendas: (params: { dias: number | null; limite?: number }) =>
+    invoke<TopPrenda[]>("top_prendas_vendidas", {
+      dias: params.dias,
+      limite: params.limite ?? null,
+    }),
 };
