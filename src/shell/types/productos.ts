@@ -18,5 +18,6 @@ export type FiltroProductos = {
   categoria?: string | null;
   talla?: string | null;
   nombre?: string | null;
+  sku?: string | null;
   estado_stock?: EstadoStockFiltro | null;
 };

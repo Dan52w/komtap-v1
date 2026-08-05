@@ -1,7 +1,6 @@
 import { ActivarLicencia } from "./shell/components/auth/ActivarLicencia";
 import { Login } from "./shell/components/auth/Login";
 import { RegistrarUsuario } from "./shell/components/auth/RegistrarUsuario";
-import { Dashboard } from "./shell/components/dashboard/Dashboard";
 import { AppShell } from "./shell/components/layout/AppShell";
 import { AuthProvider, useAuth } from "./shell/context/AuthContext";
 
@@ -31,11 +30,7 @@ function FlujoPrincipal() {
         </div>
       );
     case "autenticado":
-      return (
-        <AppShell>
-          <Dashboard />
-        </AppShell>
-      );
+      return <AppShell />;
   }
 }
 

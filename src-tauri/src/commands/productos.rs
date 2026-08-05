@@ -22,6 +22,8 @@ pub struct FiltroProductos {
     pub categoria: Option<String>,
     pub talla: Option<String>,
     pub nombre: Option<String>,
+    /// Código de barra / SKU. Coincidencia parcial para permitir escaneo progresivo.
+    pub sku: Option<String>,
     /// "agotado" | "bajo" | "disponible" | None = todos
     pub estado_stock: Option<String>,
 }
@@ -64,7 +66,13 @@ pub fn crear_producto(state: State<DbConnection>, producto: Producto) -> Result<
 #[tauri::command]
 pub fn listar_productos(state: State<DbConnection>, filtro: Option<FiltroProductos>) -> Result<Vec<Producto>, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
-    let filtro = filtro.unwrap_or(FiltroProductos { categoria: None, talla: None, nombre: None, estado_stock: None });
+    let filtro = filtro.unwrap_or(FiltroProductos {
+        categoria: None,
+        talla: None,
+        nombre: None,
+        sku: None,
+        estado_stock: None,
+    });
 
     let condicion_stock = match filtro.estado_stock.as_deref() {
         Some("agotado") => "AND stock_actual = 0",
@@ -78,13 +86,14 @@ pub fn listar_productos(state: State<DbConnection>, filtro: Option<FiltroProduct
          WHERE (?1 IS NULL OR categoria = ?1)
            AND (?2 IS NULL OR talla = ?2)
            AND (?3 IS NULL OR nombre LIKE '%' || ?3 || '%')
+           AND (?4 IS NULL OR sku LIKE '%' || ?4 || '%')
            {condicion_stock}
          ORDER BY nombre"
     );
 
     let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
     let productos = stmt
-        .query_map((&filtro.categoria, &filtro.talla, &filtro.nombre), mapear_producto)
+        .query_map((&filtro.categoria, &filtro.talla, &filtro.nombre, &filtro.sku), mapear_producto)
         .map_err(|e| e.to_string())?
         .filter_map(|r| r.ok())
         .collect();
@@ -149,3 +158,4 @@ pub fn eliminar_producto(state: State<DbConnection>, producto_id: i64) -> Result
     conn.execute("DELETE FROM productos WHERE id = ?1", [producto_id]).map_err(|e| e.to_string())?;
     Ok(())
 }
+

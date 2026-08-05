@@ -1,11 +1,11 @@
 import type { Modulo } from "../../types/navegacion";
 
-const NAV_ITEMS: { label: string; modulo: Modulo | null }[] = [
-  { label: "Dashboard", modulo: "dashboard" },
-  { label: "Inventario", modulo: "inventario" },
-  { label: "Proveedores", modulo: null },
-  { label: "Ventas", modulo: null },
-  { label: "Gastos", modulo: null },
+const NAV_ITEMS: { label: string; modulo: Modulo | null; icon: string }[] = [
+  { label: "Dashboard", modulo: "dashboard", icon: "◧" },
+  { label: "Inventario", modulo: "inventario", icon: "▤" },
+  { label: "Proveedores", modulo: null, icon: "⇄" },
+  { label: "Ventas", modulo: null, icon: "◈" },
+  { label: "Gastos", modulo: null, icon: "◎" },
 ];
 
 type Props = {
@@ -29,10 +29,16 @@ export function Sidebar({ moduloActivo, onNavegar }: Props) {
               className={`app-sidebar__link ${item.modulo === moduloActivo ? "activo" : ""}`}
               onClick={() => onNavegar(item.modulo!)}
             >
+              <span className="app-sidebar__icon" aria-hidden="true">
+                {item.icon}
+              </span>
               {item.label}
             </button>
           ) : (
             <div key={item.label} className="app-sidebar__link proximamente">
+              <span className="app-sidebar__icon" aria-hidden="true">
+                {item.icon}
+              </span>
               {item.label}
               <span className="app-sidebar__tag">pronto</span>
             </div>

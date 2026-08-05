@@ -18,7 +18,7 @@ export function useProductos(filtro: FiltroProductos) {
       setCargando(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtro.categoria, filtro.talla, filtro.nombre, filtro.estado_stock]);
+  }, [filtro.categoria, filtro.talla, filtro.nombre, filtro.sku, filtro.estado_stock]);
 
   useEffect(() => {
     cargar();
