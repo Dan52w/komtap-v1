@@ -56,6 +56,7 @@ pub fn run() {
             commands::reportes::ventas_por_metodo_pago,
             commands::reportes::productos_stock_critico,
             commands::reportes::desglose_gastos_mes,
+            commands::reportes::dashboard_financiero_mes,
         ])
         .run(tauri::generate_context!())
         .expect("error corriendo la app");
