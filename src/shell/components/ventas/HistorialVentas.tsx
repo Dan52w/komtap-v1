@@ -2,12 +2,19 @@ import type { Venta } from "../../types/ventas";
 
 const dinero = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 
-export function HistorialVentas({ ventas }: { ventas: Venta[] }) {
+type Props = {
+  ventas: Venta[];
+  hayMas?: boolean;
+  cargando?: boolean;
+  onCargarMas?: () => void;
+};
+
+export function HistorialVentas({ ventas, hayMas, cargando, onCargarMas }: Props) {
   return (
     <section className="history-card">
       <div className="panel-title">
         <h3>Últimas ventas</h3>
-        <p>{ventas.length} movimientos registrados</p>
+        <p>{ventas.length} movimientos cargados</p>
       </div>
       {ventas.map((v) => (
         <article className="history-item" key={v.id}>
@@ -21,6 +28,12 @@ export function HistorialVentas({ ventas }: { ventas: Venta[] }) {
           <strong>{dinero.format(v.total_neto)}</strong>
         </article>
       ))}
+
+      {hayMas && (
+        <button className="btn btn--ghost" style={{ width: "100%", marginTop: "0.75rem" }} disabled={cargando} onClick={onCargarMas}>
+          {cargando ? "Cargando…" : "Cargar más"}
+        </button>
+      )}
     </section>
   );
 }

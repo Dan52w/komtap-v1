@@ -77,7 +77,12 @@ pub fn eliminar_proveedor(state: State<DbConnection>, proveedor_id: i64) -> Resu
         return Err("No se puede eliminar el proveedor porque tiene facturas/compras asociadas".to_string());
     }
 
-    conn.execute("DELETE FROM proveedores WHERE id=?1", [proveedor_id]).map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM proveedores WHERE id=?1", [proveedor_id]).map_err(|e| {
+        crate::db::friendly_delete_error(
+            e,
+            "No se puede eliminar el proveedor: tiene registros relacionados (facturas u otros datos).",
+        )
+    })?;
     Ok(())
 }
 

@@ -21,3 +21,16 @@ pub fn init_db(app_handle: &tauri::AppHandle) -> Connection {
 
     conn
 }
+
+/// Convierte un error de rusqlite en un mensaje amigable cuando se trata
+/// específicamente de una violación de foreign key (código extendido 787).
+/// Para cualquier otro error, deja pasar el mensaje original de SQLite.
+pub fn friendly_delete_error(e: rusqlite::Error, mensaje_fk: &str) -> String {
+    if let rusqlite::Error::SqliteFailure(ffi_err, _) = &e {
+        const SQLITE_CONSTRAINT_FOREIGNKEY: i32 = 787;
+        if ffi_err.extended_code == SQLITE_CONSTRAINT_FOREIGNKEY {
+            return mensaje_fk.to_string();
+        }
+    }
+    e.to_string()
+}

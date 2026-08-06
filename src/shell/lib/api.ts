@@ -8,7 +8,7 @@ import type {
 } from "../types/reportes";
 import type { Producto, FiltroProductos } from "../types/productos";
 import type { TopPrenda } from "../types/ventas";
-import type { Proveedor, ResumenProveedor, FacturaProveedor, AbonoProveedor, ItemFactura, DetalleFactura, NuevaFacturaInput, AbonoInput } from "../types/proveedores";
+import type { Proveedor, ResumenProveedor, FacturaProveedor, AbonoProveedor, DetalleFactura, NuevaFacturaInput, AbonoInput } from "../types/proveedores";
 import type { Gasto, NuevoGasto } from "../types/gastos";
 import type { Venta, NuevaVenta, ItemVenta } from "../types/ventas";
 
@@ -105,9 +105,14 @@ export const ventas = {
       dias: params.dias,
       limite: params.limite ?? null,
     }),
-  listar: (mes?: string) => invoke<Venta[]>("listar_ventas", { limite: 500, offset: 0, mes: mes ?? null }),
+  listar: (params?: { mes?: string; limite?: number; offset?: number }) =>
+    invoke<Venta[]>("listar_ventas", {
+      limite: params?.limite ?? 50,
+      offset: params?.offset ?? 0,
+      mes: params?.mes ?? null,
+    }),
   crear: (venta: NuevaVenta) => invoke<number>("crear_venta", { venta }),
-  listarItems: (ventaId:number) => invoke<ItemVenta[]>("listar_items_venta", { ventaId }),
+  listarItems: (ventaId: number) => invoke<ItemVenta[]>("listar_items_venta", { ventaId }),
 };
 
 export const gastos = {

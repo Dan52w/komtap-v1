@@ -22,7 +22,7 @@ export function useReportes(mes: string) {
     try {
       const [fin, v, g, proveedoresList, deuda] = await Promise.all([
         reportesApi.dashboardFinancieroMes(mes),
-        ventasApi.listar(mes),
+        ventasApi.listar({ mes, limite: 500 }),
         gastosApi.listar(mes),
         proveedoresApi.listar(),
         proveedoresApi.deudaTotalGlobal(),

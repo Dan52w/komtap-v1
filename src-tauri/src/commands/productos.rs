@@ -162,12 +162,10 @@ pub fn eliminar_producto(state: State<DbConnection>, producto_id: i64) -> Result
     }
 
     conn.execute("DELETE FROM productos WHERE id = ?1", [producto_id]).map_err(|e| {
-        let msg = e.to_string();
-        if msg.contains("FOREIGN KEY") || msg.contains("constraint") {
-            "No se puede eliminar: el producto todavía tiene registros relacionados. Márquelo como inactivo.".to_string()
-        } else {
-            msg
-        }
+        crate::db::friendly_delete_error(
+            e,
+            "No se puede eliminar: el producto todavía tiene registros relacionados. Márquelo como inactivo.",
+        )
     })?;
     Ok(())
 }

@@ -9,10 +9,14 @@ import { DatosVenta } from "./DatosVenta";
 import { HistorialVentas } from "./HistorialVentas";
 
 const dinero = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+const PAGE_SIZE = 30;
 
 export function Ventas() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [historial, setHistorial] = useState<Venta[]>([]);
+  const [offset, setOffset] = useState(0);
+  const [hayMas, setHayMas] = useState(true);
+  const [cargandoMas, setCargandoMas] = useState(false);
   const [metodo, setMetodo] = useState("Efectivo");
   const [descuento, setDescuento] = useState(0);
   const [cliente, setCliente] = useState("");
@@ -20,13 +24,34 @@ export function Ventas() {
   const [guardando, setGuardando] = useState(false);
   const carrito = useCarritoVenta();
 
+  // Recarga completa: productos + primera página del historial (offset 0).
   const cargar = async () => {
     try {
-      const [p, v] = await Promise.all([productosApi.listar(), ventasApi.listar()]);
+      const [p, v] = await Promise.all([
+        productosApi.listar(),
+        ventasApi.listar({ limite: PAGE_SIZE, offset: 0 }),
+      ]);
       setProductos(p.filter((x) => x.estado === "activo" && x.stock_actual > 0));
       setHistorial(v);
+      setOffset(v.length);
+      setHayMas(v.length === PAGE_SIZE);
     } catch (e) {
       setError(String(e));
+    }
+  };
+
+  const cargarMas = async () => {
+    if (cargandoMas || !hayMas) return;
+    setCargandoMas(true);
+    try {
+      const v = await ventasApi.listar({ limite: PAGE_SIZE, offset });
+      setHistorial((prev) => [...prev, ...v]);
+      setOffset((prev) => prev + v.length);
+      setHayMas(v.length === PAGE_SIZE);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setCargandoMas(false);
     }
   };
 
@@ -57,7 +82,7 @@ export function Ventas() {
       carrito.limpiar();
       setDescuento(0);
       setCliente("");
-      await cargar();
+      await cargar(); // vuelve a la primera página con la venta nueva arriba
     } catch (e) {
       setError(String(e));
     } finally {
@@ -99,7 +124,7 @@ export function Ventas() {
           </button>
         </section>
 
-        <HistorialVentas ventas={historial} />
+        <HistorialVentas ventas={historial} hayMas={hayMas} cargando={cargandoMas} onCargarMas={cargarMas} />
       </div>
     </div>
   );
