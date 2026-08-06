@@ -1,15 +1,57 @@
-import { FormEvent, useEffect, useState } from "react";
-import { gastos as api } from "../../lib/api";
-import type { Gasto } from "../../types/gastos";
-import { Modal } from "../common/Modal";
+import { useState } from "react";
+import { useGastos } from "../../../hooks/useGastos";
+import { GastoFormModal } from "./GastoFormModal";
+import { TablaGastos } from "./TablaGastos";
+
 const moneda = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 const mesActual = new Date().toISOString().slice(0, 7);
 
 export function Gastos() {
- const [mes, setMes] = useState(mesActual); const [lista, setLista] = useState<Gasto[]>([]); const [nuevo, setNuevo] = useState(false); const [error, setError] = useState<string | null>(null);
- const cargar = async () => { try { setLista(await api.listar(mes)); } catch (e) { setError(String(e)); } };
- useEffect(() => { void cargar(); }, [mes]);
- const total = lista.reduce((a, g) => a + g.monto, 0);
- return <div className="module-page"><div className="module-header"><div><p className="eyebrow">Control operativo</p><h1>Gastos</h1><p>Registra los egresos que no provienen de compras a proveedores.</p></div><div className="header-actions"><input aria-label="Mes" type="month" value={mes} onChange={(e) => setMes(e.target.value)} /><button className="btn btn--primary" onClick={() => setNuevo(true)}>+ Registrar gasto</button></div></div>{error && <p className="form-error">{error}</p>}<section className="summary-strip"><div><span>Total del mes</span><strong className="amount--negative">{moneda.format(total)}</strong></div><div><span>Movimientos</span><strong>{lista.length}</strong></div></section><div className="tabla-card"><table className="tabla-base"><thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Pago</th><th>Monto</th><th></th></tr></thead><tbody>{lista.map((g) => <tr key={g.id}><td>{g.fecha.slice(0, 10)}</td><td><strong>{g.descripcion}</strong></td><td><span className="badge badge--amarillo">{g.categoria}</span></td><td>{g.metodo_pago}</td><td className="amount amount--negative">{moneda.format(g.monto)}</td><td><button className="danger-link" onClick={async () => { if (window.confirm("¿Eliminar este gasto?")) { await api.eliminar(g.id); await cargar(); } }}>Eliminar</button></td></tr>)}{!lista.length && <tr><td colSpan={6} className="empty-state">No hay gastos para este mes.</td></tr>}</tbody></table></div>{nuevo && <GastoModal onCerrar={() => setNuevo(false)} onGuardar={async (g) => { await api.crear(g); await cargar(); setNuevo(false); }} />}</div>;
+  const [mes, setMes] = useState(mesActual);
+  const [nuevo, setNuevo] = useState(false);
+  const { lista, error, crear, eliminar } = useGastos(mes);
+  const total = lista.reduce((acc, g) => acc + g.monto, 0);
+
+  return (
+    <div className="module-page">
+      <div className="module-header">
+        <div>
+          <p className="eyebrow">Control operativo</p>
+          <h1>Gastos</h1>
+          <p>Registra los egresos que no provienen de compras a proveedores.</p>
+        </div>
+        <div className="header-actions">
+          <input aria-label="Mes" type="month" value={mes} onChange={(e) => setMes(e.target.value)} />
+          <button className="btn btn--primary" onClick={() => setNuevo(true)}>
+            + Registrar gasto
+          </button>
+        </div>
+      </div>
+
+      {error && <p className="form-error">{error}</p>}
+
+      <section className="summary-strip">
+        <div>
+          <span>Total del mes</span>
+          <strong className="amount--negative">{moneda.format(total)}</strong>
+        </div>
+        <div>
+          <span>Movimientos</span>
+          <strong>{lista.length}</strong>
+        </div>
+      </section>
+
+      <TablaGastos gastos={lista} onEliminar={eliminar} />
+
+      {nuevo && (
+        <GastoFormModal
+          onCerrar={() => setNuevo(false)}
+          onGuardar={async (g) => {
+            await crear(g);
+            setNuevo(false);
+          }}
+        />
+      )}
+    </div>
+  );
 }
-function GastoModal({ onCerrar, onGuardar }: { onCerrar: () => void; onGuardar: (g: { descripcion: string; monto: number; fecha?: string; categoria?: string; metodo_pago?: string }) => Promise<void> }) { const [descripcion,setDescripcion]=useState(""); const [monto,setMonto]=useState(0); const [fecha,setFecha]=useState(new Date().toISOString().slice(0,10)); const [categoria,setCategoria]=useState("General"); const [metodo,setMetodo]=useState("Efectivo"); const [error,setError]=useState<string|null>(null); const submit=async(e:FormEvent)=>{e.preventDefault(); if(!descripcion.trim()||monto<=0)return setError("Completa una descripción y un monto válido"); try{await onGuardar({descripcion,monto,fecha,categoria,metodo_pago:metodo});}catch(err){setError(String(err));}}; return <Modal titulo="Registrar gasto" onCerrar={onCerrar}><form className="form-grid" onSubmit={submit}><label>Descripción</label><input autoFocus value={descripcion} onChange={e=>setDescripcion(e.target.value)} /><div className="form-grid__cols-2"><div><label>Monto</label><input type="number" min="1" value={monto || ""} onChange={e=>setMonto(Number(e.target.value))} /></div><div><label>Fecha</label><input type="date" value={fecha} onChange={e=>setFecha(e.target.value)} /></div></div><div className="form-grid__cols-2"><div><label>Categoría</label><select value={categoria} onChange={e=>setCategoria(e.target.value)}>{["General","Arriendo","Servicios","Nómina","Mantenimiento","Varios"].map(x=><option key={x}>{x}</option>)}</select></div><div><label>Método de pago</label><select value={metodo} onChange={e=>setMetodo(e.target.value)}>{["Efectivo","Transferencia","Tarjeta","Otro"].map(x=><option key={x}>{x}</option>)}</select></div></div>{error&&<p className="form-error">{error}</p>}<div className="modal__acciones"><button type="button" className="btn btn--ghost" onClick={onCerrar}>Cancelar</button><button className="btn btn--primary">Registrar</button></div></form></Modal>; }

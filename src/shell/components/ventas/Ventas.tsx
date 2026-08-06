@@ -1,6 +1,106 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { productos as productosApi, ventas as ventasApi } from "../../lib/api";
 import type { Producto } from "../../types/productos";
 import type { Venta } from "../../types/ventas";
-const dinero=new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0});type Item={producto:Producto;cantidad:number;precio:number};
-export function Ventas(){const[productos,setProductos]=useState<Producto[]>([]),[historial,setHistorial]=useState<Venta[]>([]),[items,setItems]=useState<Item[]>([]),[busqueda,setBusqueda]=useState(""),[metodo,setMetodo]=useState("Efectivo"),[descuento,setDescuento]=useState(0),[cliente,setCliente]=useState(""),[error,setError]=useState<string|null>(null),[guardando,setGuardando]=useState(false);const cargar=async()=>{try{const[p,v]=await Promise.all([productosApi.listar(),ventasApi.listar()]);setProductos(p.filter(x=>x.estado==="activo"&&x.stock_actual>0));setHistorial(v)}catch(e){setError(String(e))}};useEffect(()=>{void cargar()},[]);const resultados=useMemo(()=>{const q=busqueda.trim().toLowerCase();return q?productos.filter(p=>p.nombre.toLowerCase().includes(q)||p.sku?.toLowerCase().includes(q)).slice(0,8):[]},[busqueda,productos]);const agregar=(p:Producto)=>{if(items.some(x=>x.producto.id===p.id))return setError("Ese artículo ya está en la venta.");setItems([...items,{producto:p,cantidad:1,precio:p.precio_venta}]);setBusqueda("");setError(null)};const total=Math.max(0,items.reduce((n,x)=>n+x.cantidad*x.precio,0)-descuento);const confirmar=async()=>{if(!items.length)return setError("Agrega al menos un artículo.");setGuardando(true);try{await ventasApi.crear({items:items.map(x=>({producto_id:x.producto.id!,cantidad:x.cantidad,precio_unitario:x.precio})),descuento,metodo_pago:metodo,referencia_cliente:cliente||null});setItems([]);setDescuento(0);setCliente("");await cargar()}catch(e){setError(String(e))}finally{setGuardando(false)}};return <div className="module-page"><div className="module-header"><div><p className="eyebrow">Punto de venta</p><h1>Ventas</h1><p>Busca por nombre o código de barras y registra el pago.</p></div></div>{error&&<p className="form-error">{error}</p>}<div className="sales-layout"><section className="sale-card"><h3>Nueva venta</h3><div className="barcode-search"><label htmlFor="busqueda-articulo">Buscar artículo</label><input id="busqueda-articulo" autoFocus value={busqueda} onChange={e=>setBusqueda(e.target.value)} placeholder="Nombre o código de barras"/>{resultados.length>0&&<div className="search-results">{resultados.map(p=><button type="button" key={p.id} onClick={()=>agregar(p)}><strong>{p.nombre}</strong><small>Código: {p.sku||"Sin código"} · Talla: {p.talla} · Color: {p.color||"Sin color"} · Stock: {p.stock_actual}</small></button>)}</div>}<small>Escribe o escanea el código; los resultados aparecen al instante.</small></div><div className="sale-items">{items.map((x,i)=><div className="sale-item" key={x.producto.id}><div><strong>{x.producto.nombre}</strong><small>{x.producto.talla} · {x.producto.color||"Sin color"} · Stock: {x.producto.stock_actual}</small></div><input aria-label="Cantidad" type="number" min="1" max={x.producto.stock_actual} value={x.cantidad} onChange={e=>setItems(items.map((a,n)=>n===i?{...a,cantidad:Number(e.target.value)}:a))}/><input aria-label="Precio" type="number" min="0" value={x.precio} onChange={e=>setItems(items.map((a,n)=>n===i?{...a,precio:Number(e.target.value)}:a))}/><button className="icon-button" onClick={()=>setItems(items.filter((_,n)=>n!==i))}>×</button></div>)}{!items.length&&<p className="empty-state">Busca un artículo para añadirlo a la venta.</p>}</div><div className="sale-details"><label>Descuento<input type="number" min="0" value={descuento||""} onChange={e=>setDescuento(Number(e.target.value))}/></label><label>Método<select value={metodo} onChange={e=>setMetodo(e.target.value)}>{["Efectivo","Transferencia","Tarjeta","Mixto","Credito"].map(x=><option key={x}>{x}</option>)}</select></label><label>Cliente (opcional)<input value={cliente} onChange={e=>setCliente(e.target.value)} placeholder="Nombre o teléfono"/></label></div><div className="sale-total"><span>Total</span><strong>{dinero.format(total)}</strong></div><button className="btn btn--primary sale-submit" disabled={guardando} onClick={()=>void confirmar()}>{guardando?"Registrando…":"Confirmar venta"}</button></section><section className="history-card"><div className="panel-title"><h3>Últimas ventas</h3><p>{historial.length} movimientos registrados</p></div>{historial.map(v=><article className="history-item" key={v.id}><div><strong>Venta #{v.id}</strong><span>{v.fecha.slice(0,16)}</span><small>{v.metodo_pago} · {v.estado_pago}</small></div><strong>{dinero.format(v.total_neto)}</strong></article>)}</section></div></div>}
+import { useCarritoVenta } from "../../../hooks/useCarritoVenta";
+import { BuscadorArticulo } from "./BuscadorArticulo";
+import { CarritoItems } from "./CarritoItems";
+import { DatosVenta } from "./DatosVenta";
+import { HistorialVentas } from "./HistorialVentas";
+
+const dinero = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+
+export function Ventas() {
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [historial, setHistorial] = useState<Venta[]>([]);
+  const [metodo, setMetodo] = useState("Efectivo");
+  const [descuento, setDescuento] = useState(0);
+  const [cliente, setCliente] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const carrito = useCarritoVenta();
+
+  const cargar = async () => {
+    try {
+      const [p, v] = await Promise.all([productosApi.listar(), ventasApi.listar()]);
+      setProductos(p.filter((x) => x.estado === "activo" && x.stock_actual > 0));
+      setHistorial(v);
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
+  useEffect(() => {
+    void cargar();
+  }, []);
+
+  const agregarProducto = (p: Producto) => setError(carrito.agregar(p));
+
+  const confirmar = async () => {
+    if (!carrito.items.length) {
+      setError("Agrega al menos un artículo.");
+      return;
+    }
+    setGuardando(true);
+    setError(null);
+    try {
+      await ventasApi.crear({
+        items: carrito.items.map((x) => ({
+          producto_id: x.producto.id!,
+          cantidad: x.cantidad,
+          precio_unitario: x.precio,
+        })),
+        descuento,
+        metodo_pago: metodo,
+        referencia_cliente: cliente || null,
+      });
+      carrito.limpiar();
+      setDescuento(0);
+      setCliente("");
+      await cargar();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <div className="module-page">
+      <div className="module-header">
+        <div>
+          <p className="eyebrow">Punto de venta</p>
+          <h1>Ventas</h1>
+          <p>Busca por nombre o código de barras y registra el pago.</p>
+        </div>
+      </div>
+
+      {error && <p className="form-error">{error}</p>}
+
+      <div className="sales-layout">
+        <section className="sale-card">
+          <h3>Nueva venta</h3>
+          <BuscadorArticulo productos={productos} onSeleccionar={agregarProducto} />
+          <CarritoItems items={carrito.items} onActualizar={carrito.actualizar} onQuitar={carrito.quitar} />
+          <DatosVenta
+            descuento={descuento}
+            metodo={metodo}
+            cliente={cliente}
+            onCambiarDescuento={setDescuento}
+            onCambiarMetodo={setMetodo}
+            onCambiarCliente={setCliente}
+          />
+          <div className="sale-total">
+            <span>Total</span>
+            <strong>{dinero.format(carrito.total(descuento))}</strong>
+          </div>
+          <button className="btn btn--primary sale-submit" disabled={guardando} onClick={() => void confirmar()}>
+            {guardando ? "Registrando…" : "Confirmar venta"}
+          </button>
+        </section>
+
+        <HistorialVentas ventas={historial} />
+      </div>
+    </div>
+  );
+}
