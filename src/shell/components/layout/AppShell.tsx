@@ -3,6 +3,10 @@ import { useAuth } from "../../context/AuthContext";
 import { Sidebar } from "./Sidebar";
 import { Dashboard } from "../dashboard/Dashboard";
 import { Inventario } from "../productos/Inventario";
+import { Proveedores } from "../proveedores/Proveedores";
+import { Ventas } from "../ventas/Ventas";
+import { Gastos } from "../gastos/Gastos";
+import { Reportes } from "../reportes/Reportes";
 import type { Modulo } from "../../types/navegacion";
 
 export function AppShell() {
@@ -20,7 +24,12 @@ export function AppShell() {
           </div>
         </header>
         <main className="app-content">
-          {moduloActivo === "dashboard" ? <Dashboard /> : <Inventario />}
+          {moduloActivo === "dashboard" && <Dashboard />}
+          {moduloActivo === "inventario" && <Inventario />}
+          {moduloActivo === "proveedores" && <Proveedores />}
+          {moduloActivo === "ventas" && <Ventas />}
+          {moduloActivo === "gastos" && <Gastos />}
+          {moduloActivo === "reportes" && <Reportes />}
         </main>
       </div>
     </div>

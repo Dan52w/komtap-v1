@@ -12,7 +12,7 @@ pub struct Proveedor {
     pub notas: Option<String>,
 }
 
-const METODOS_PAGO_VALIDOS: [&str; 4] = ["Efectivo", "Transferencia", "Cheque", "Otro"];
+const METODOS_PAGO_VALIDOS: [&str; 6] = ["Efectivo", "Transferencia", "Transferencia bancaria", "Consignación", "Cheque", "Otro"];
 
 fn validar_metodo_pago(metodo: &str) -> Result<(), String> {
     if !METODOS_PAGO_VALIDOS.contains(&metodo) {
@@ -88,12 +88,14 @@ pub struct ItemFacturaInput {
     /// Si `producto_id` es None, se crea un producto nuevo con los datos aquí provistos.
     pub producto_id: Option<i64>,
     pub nombre_nuevo: Option<String>,
+    pub sku_nuevo: Option<String>,
     pub categoria_nueva: Option<String>,
     pub talla_nueva: Option<String>,
     pub color_nuevo: Option<String>,
     pub cantidad: i64,
     pub costo_unitario: f64,
     pub precio_venta_sugerido: Option<f64>,
+    pub stock_minimo_nuevo: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -103,6 +105,7 @@ pub struct AbonoInput {
     pub banco: Option<String>,
     pub numero_referencia: Option<String>,
     pub nota: Option<String>,
+    pub fecha: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -137,6 +140,17 @@ pub struct AbonoProveedor {
     pub banco: Option<String>,
     pub numero_referencia: Option<String>,
     pub nota: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ItemFacturaDetalle {
+    pub id: i64,
+    pub producto_id: i64,
+    pub producto_nombre: String,
+    pub cantidad: i64,
+    pub costo_unitario: f64,
+    pub precio_venta_sugerido: Option<f64>,
+    pub subtotal: f64,
 }
 
 fn calcular_subtotal(cantidad: i64, costo_unitario: f64) -> f64 {
@@ -204,15 +218,17 @@ pub fn crear_factura_proveedor(state: State<DbConnection>, factura: NuevaFactura
             None => {
                 let nombre = item.nombre_nuevo.clone().ok_or("Falta el nombre de la prenda nueva")?;
                 tx.execute(
-                    "INSERT INTO productos (nombre, categoria, talla, color, costo_unitario, precio_venta, stock_actual)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0)",
+                    "INSERT INTO productos (sku, nombre, categoria, talla, color, costo_unitario, precio_venta, stock_actual, stock_minimo)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, ?8)",
                     (
+                        &item.sku_nuevo,
                         &nombre,
                         item.categoria_nueva.clone().unwrap_or_else(|| "General".to_string()),
                         item.talla_nueva.clone().unwrap_or_else(|| "Única".to_string()),
                         &item.color_nuevo,
                         item.costo_unitario,
                         item.precio_venta_sugerido.unwrap_or(0.0),
+                        item.stock_minimo_nuevo.unwrap_or(3).max(0),
                     ),
                 ).map_err(|e| e.to_string())?;
                 tx.last_insert_rowid()
@@ -230,8 +246,8 @@ pub fn crear_factura_proveedor(state: State<DbConnection>, factura: NuevaFactura
     if let Some(abono) = &factura.abono_inicial {
         tx.execute(
             "INSERT INTO abonos_proveedor (factura_id, monto, metodo_pago, banco, numero_referencia, nota, fecha)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, datetime('now','localtime'))",
-            (factura_id, abono.monto, &abono.metodo_pago, &abono.banco, &abono.numero_referencia, &abono.nota),
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, COALESCE(?7, datetime('now','localtime')))",
+            (factura_id, abono.monto, &abono.metodo_pago, &abono.banco, &abono.numero_referencia, &abono.nota, &abono.fecha),
         ).map_err(|e| e.to_string())?;
     }
 
@@ -282,6 +298,21 @@ pub fn listar_abonos_factura_proveedor(state: State<DbConnection>, factura_id: i
 }
 
 #[tauri::command]
+pub fn listar_items_factura_proveedor(state: State<DbConnection>, factura_id: i64) -> Result<Vec<ItemFacturaDetalle>, String> {
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare(
+        "SELECT i.id, i.producto_id, p.nombre, i.cantidad, i.costo_unitario, i.precio_venta_sugerido, i.subtotal
+         FROM items_factura_proveedor i JOIN productos p ON p.id = i.producto_id
+         WHERE i.factura_id = ?1 ORDER BY i.id"
+    ).map_err(|e| e.to_string())?;
+    let items = stmt.query_map([factura_id], |row| Ok(ItemFacturaDetalle {
+        id: row.get(0)?, producto_id: row.get(1)?, producto_nombre: row.get(2)?, cantidad: row.get(3)?,
+        costo_unitario: row.get(4)?, precio_venta_sugerido: row.get(5)?, subtotal: row.get(6)?,
+    })).map_err(|e| e.to_string())?.filter_map(|r| r.ok()).collect();
+    Ok(items)
+}
+
+#[tauri::command]
 pub fn registrar_abono_proveedor(state: State<DbConnection>, factura_id: i64, abono: AbonoInput) -> Result<i64, String> {
     validar_metodo_pago(&abono.metodo_pago)?;
 
@@ -299,8 +330,8 @@ pub fn registrar_abono_proveedor(state: State<DbConnection>, factura_id: i64, ab
 
     tx.execute(
         "INSERT INTO abonos_proveedor (factura_id, monto, metodo_pago, banco, numero_referencia, nota, fecha)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, datetime('now','localtime'))",
-        (factura_id, abono.monto, &abono.metodo_pago, &abono.banco, &abono.numero_referencia, &abono.nota),
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, COALESCE(?7, datetime('now','localtime')))",
+        (factura_id, abono.monto, &abono.metodo_pago, &abono.banco, &abono.numero_referencia, &abono.nota, &abono.fecha),
     ).map_err(|e| e.to_string())?;
 
     let nuevo_saldo = saldo_pendiente - abono.monto;

@@ -1,1 +1,1 @@
-export type Modulo = "dashboard" | "inventario";
+export type Modulo = "dashboard" | "inventario" | "proveedores" | "ventas" | "gastos" | "reportes";

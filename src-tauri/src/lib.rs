@@ -37,6 +37,7 @@ pub fn run() {
             commands::proveedores::crear_factura_proveedor,
             commands::proveedores::listar_facturas_proveedor,
             commands::proveedores::listar_abonos_factura_proveedor,
+            commands::proveedores::listar_items_factura_proveedor,
             commands::proveedores::registrar_abono_proveedor,
             commands::proveedores::deuda_total_global,
             commands::proveedores::resumen_por_proveedor,

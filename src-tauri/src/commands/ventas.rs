@@ -139,7 +139,7 @@ pub fn crear_venta(state: State<DbConnection>, venta: NuevaVenta) -> Result<i64,
 }
 
 #[tauri::command]
-pub fn listar_ventas(state: State<DbConnection>, limite: Option<i64>, offset: Option<i64>) -> Result<Vec<Venta>, String> {
+pub fn listar_ventas(state: State<DbConnection>, limite: Option<i64>, offset: Option<i64>, mes: Option<String>) -> Result<Vec<Venta>, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
     let limite = limite.unwrap_or(50).clamp(1, 500);
     let offset = offset.unwrap_or(0).max(0);
@@ -148,10 +148,11 @@ pub fn listar_ventas(state: State<DbConnection>, limite: Option<i64>, offset: Op
         "SELECT id, fecha, subtotal, descuento, total_neto,
                 monto_pagado, saldo_pendiente, metodo_pago, estado_pago, referencia_cliente
          FROM ventas
-         ORDER BY fecha DESC LIMIT ?1 OFFSET ?2"
+         WHERE (?1 IS NULL OR substr(fecha, 1, 7) = ?1)
+         ORDER BY fecha DESC LIMIT ?2 OFFSET ?3"
     ).map_err(|e| e.to_string())?;
 
-    let ventas = stmt.query_map((limite, offset), |row| {
+    let ventas = stmt.query_map((mes, limite, offset), |row| {
         Ok(Venta {
             id: row.get(0)?,
             fecha: row.get(1)?,
