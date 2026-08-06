@@ -8,7 +8,7 @@ import type {
 } from "../types/reportes";
 import type { Producto, FiltroProductos } from "../types/productos";
 import type { TopPrenda } from "../types/ventas";
-import type { Proveedor, ResumenProveedor, FacturaProveedor, AbonoProveedor, ItemFactura, DetalleFactura } from "../types/proveedores";
+import type { Proveedor, ResumenProveedor, FacturaProveedor, AbonoProveedor, ItemFactura, DetalleFactura, NuevaFacturaInput, AbonoInput } from "../types/proveedores";
 import type { Gasto, NuevoGasto } from "../types/gastos";
 import type { Venta, NuevaVenta, ItemVenta } from "../types/ventas";
 
@@ -48,14 +48,10 @@ export const auth = {
 // ===== Reportes / dashboard (HU-08) =====
 
 export const reportes = {
-  dashboardFinanciero: (periodo: Periodo) =>
-    invoke<DashboardFinanciero>("dashboard_financiero", { periodo }),
-
-  ventasPorMetodoPago: (mes: string) =>
-    invoke<VentasPorMetodoPago[]>("ventas_por_metodo_pago", { mes }),
-
-  productosStockCritico: () =>
-    invoke<ProductoCritico[]>("productos_stock_critico"),
+  dashboardFinanciero: (periodo: Periodo) => invoke<DashboardFinanciero>("dashboard_financiero", { periodo }),
+  dashboardFinancieroMes: (mes: string) => invoke<DashboardFinanciero>("dashboard_financiero_mes", { mes }),
+  ventasPorMetodoPago: (mes: string) => invoke<VentasPorMetodoPago[]>("ventas_por_metodo_pago", { mes }),
+  productosStockCritico: () => invoke<ProductoCritico[]>("productos_stock_critico"),
 };
 
 // ===== Proveedores (deuda global, usada en el dashboard) =====
@@ -68,10 +64,19 @@ export const proveedores = {
   eliminar: (proveedorId: number) => invoke<void>("eliminar_proveedor", { proveedorId }),
   resumen: () => invoke<ResumenProveedor[]>("resumen_por_proveedor"),
   listarFacturas: (proveedorId: number) => invoke<FacturaProveedor[]>("listar_facturas_proveedor", { proveedorId }),
-  crearFactura: (factura: { proveedor_id:number; numero_factura?:string|null; fecha_emision:string; fecha_limite_pago?:string|null; items:ItemFactura[] }) => invoke<number>("crear_factura_proveedor", { factura: { ...factura, abono_inicial: null } }),
-  listarAbonos: (facturaId:number) => invoke<AbonoProveedor[]>("listar_abonos_factura_proveedor", { facturaId }),
-  listarItemsFactura: (facturaId:number) => invoke<DetalleFactura[]>("listar_items_factura_proveedor", { facturaId }),
-  registrarAbono: (facturaId:number, abono: { monto:number; metodo_pago:string; numero_referencia?:string|null; nota?:string|null; fecha?:string|null }) => invoke<number>("registrar_abono_proveedor", { facturaId, abono: { ...abono, banco: null } }),
+  // antes mandaba abono_inicial: null siempre — ahora sí se envía lo que capture el modal
+  crearFactura: (factura: NuevaFacturaInput) =>
+    invoke<number>("crear_factura_proveedor", {
+      factura: { ...factura, abono_inicial: factura.abono_inicial ?? null },
+    }),
+  listarAbonos: (facturaId: number) => invoke<AbonoProveedor[]>("listar_abonos_factura_proveedor", { facturaId }),
+  listarItemsFactura: (facturaId: number) => invoke<DetalleFactura[]>("listar_items_factura_proveedor", { facturaId }),
+  // antes mandaba banco: null siempre — ahora viene del formulario
+  registrarAbono: (facturaId: number, abono: AbonoInput) =>
+    invoke<number>("registrar_abono_proveedor", {
+      facturaId,
+      abono: { ...abono, banco: abono.banco ?? null },
+    }),
 };
 
 // ===== Inventario / productos (HU-04) =====

@@ -22,6 +22,57 @@ pub struct DashboardFinanciero {
 }
 
 #[tauri::command]
+pub fn dashboard_financiero(state: State<DbConnection>, periodo: String) -> Result<DashboardFinanciero, String> {
+    let patron = patron_para_periodo(&periodo)?;
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+
+    let dinero_ingresado: f64 = conn.query_row(
+        &format!("SELECT COALESCE(SUM(monto_pagado), 0) FROM ventas WHERE strftime('{patron}', fecha) = strftime('{patron}', 'now', 'localtime')"),
+        [], |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+
+    let abonos_a_proveedor: f64 = conn.query_row(
+        &format!("SELECT COALESCE(SUM(monto), 0) FROM abonos_proveedor WHERE strftime('{patron}', fecha) = strftime('{patron}', 'now', 'localtime')"),
+        [], |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+
+    let gastos_operativos: f64 = conn.query_row(
+        &format!("SELECT COALESCE(SUM(monto), 0) FROM otros_gastos WHERE strftime('{patron}', fecha) = strftime('{patron}', 'now', 'localtime')"),
+        [], |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+
+    let costo_vendido: f64 = conn.query_row(
+        &format!(
+            "SELECT COALESCE(SUM(iv.costo_unitario * iv.cantidad), 0)
+             FROM items_venta iv JOIN ventas v ON v.id = iv.venta_id
+             WHERE strftime('{patron}', v.fecha) = strftime('{patron}', 'now', 'localtime')"
+        ),
+        [], |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+
+    let ventas_netas: f64 = conn.query_row(
+        &format!("SELECT COALESCE(SUM(total_neto), 0) FROM ventas WHERE strftime('{patron}', fecha) = strftime('{patron}', 'now', 'localtime')"),
+        [], |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+
+    let valor_inventario: f64 = conn.query_row(
+        "SELECT COALESCE(SUM(stock_actual * costo_unitario), 0) FROM productos",
+        [], |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+
+    let ganancia_bruta = ventas_netas - costo_vendido;
+    let ganancia_neta_real = ganancia_bruta - gastos_operativos;
+
+    Ok(DashboardFinanciero {
+        dinero_ingresado,
+        dinero_gastado: abonos_a_proveedor + gastos_operativos,
+        ganancia_bruta,
+        ganancia_neta_real,
+        valor_inventario,
+    })
+}
+
+#[tauri::command]
 pub fn dashboard_financiero_mes(state: State<DbConnection>, mes: String) -> Result<DashboardFinanciero, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
 

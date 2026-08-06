@@ -1,7 +1,62 @@
-import { useEffect, useMemo, useState } from "react";
-import { gastos as gastosApi, proveedores as proveedoresApi, ventas as ventasApi } from "../../lib/api";
+import { useState } from "react";
+import { useReportes } from "../../../hooks/useReportes";
 import { escapar, imprimirDocumento } from "../../lib/imprimir";
-import type { Gasto } from "../../types/gastos";import type { Venta } from "../../types/ventas";import type { FacturaProveedor, Proveedor } from "../../types/proveedores";
-const dinero=new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0});const mesActual=new Date().toISOString().slice(0,7);
-type FacturaLinea=FacturaProveedor&{proveedor:string};
-export function Reportes(){const[mes,setMes]=useState(mesActual),[ventas,setVentas]=useState<Venta[]>([]),[gastos,setGastos]=useState<Gasto[]>([]),[facturas,setFacturas]=useState<FacturaLinea[]>([]);useEffect(()=>{Promise.all([ventasApi.listar(mes),gastosApi.listar(mes),proveedoresApi.listar()]).then(async([v,g,p])=>{setVentas(v);setGastos(g);const listas=await Promise.all((p as Proveedor[]).map(async x=>(await proveedoresApi.listarFacturas(x.id!)).map(f=>({...f,proveedor:x.nombre}))));setFacturas(listas.flat().filter(x=>x.saldo_pendiente>0))})},[mes]);const d=useMemo(()=>{const ingreso=ventas.reduce((a,x)=>a+x.monto_pagado,0),gasto=gastos.reduce((a,x)=>a+x.monto,0),neta=ventas.reduce((a,x)=>a+x.total_neto,0)-gasto;return{ingreso,gasto,neta,deuda:facturas.reduce((a,x)=>a+x.saldo_pendiente,0)}},[ventas,gastos,facturas]);const imprimir=()=>imprimirDocumento("Reporte mensual",`<div class="summary"><div><span>Dinero ingresado</span><strong>${dinero.format(d.ingreso)}</strong></div><div><span>Ganancias netas</span><strong>${dinero.format(d.neta)}</strong></div><div><span>Deuda con proveedores</span><strong>${dinero.format(d.deuda)}</strong></div></div><h2>Facturas de proveedores</h2><table>${facturas.map(x=>`<tr><td>${escapar(x.numero_factura||x.id)}</td><td>${escapar(x.proveedor)}</td><td>${dinero.format(x.monto_total)}</td><td>${dinero.format(x.monto_total-x.saldo_pendiente)}</td><td>${escapar(x.fecha_emision)}</td></tr>`).join("")}</table>`);return <div className="module-page"><div className="module-header"><div><p className="eyebrow">Resumen financiero</p><h1>Reportes</h1></div><div className="header-actions"><input type="month" value={mes} onChange={e=>setMes(e.target.value)}/><button className="btn btn--ghost" onClick={imprimir}>Imprimir / Generar PDF</button></div></div><section className="report-kpis"><K label="Dinero ingresado" value={dinero.format(d.ingreso)} tone="positive"/><K label="Ganancias netas" value={dinero.format(d.neta)} tone={d.neta>=0?"positive":"negative"}/><K label="Gastos operativos" value={dinero.format(d.gasto)} tone="negative"/><K label="Deuda con proveedores" value={dinero.format(d.deuda)} tone="warning"/></section><div className="report-grid"><section className="report-card"><h3>Ventas del mes</h3>{ventas.map(x=><div className="report-row" key={x.id}><span>Venta #{x.id}<small>{x.fecha.slice(0,10)}</small></span><b>{dinero.format(x.total_neto)}</b></div>)}</section><section className="report-card"><h3>Gastos del mes</h3>{gastos.map(x=><div className="report-row" key={x.id}><span>{x.descripcion}<small>{x.categoria}</small></span><b>{dinero.format(x.monto)}</b></div>)}</section><section className="report-card"><h3>Facturas de proveedores</h3>{facturas.map(x=><div className="report-row" key={x.id}><span><strong>{x.numero_factura||x.id}</strong><small>Total {dinero.format(x.monto_total)} · Abonado {dinero.format(x.monto_total-x.saldo_pendiente)} · {x.fecha_emision} ({x.proveedor})</small></span><b>{dinero.format(x.saldo_pendiente)}</b></div>)}</section></div></div>};function K({label,value,tone}:{label:string;value:string;tone:string}){return <div className={`report-kpi report-kpi--${tone}`}><span>{label}</span><strong>{value}</strong></div>}
+import { ReporteKpis } from "./ReporteKpis";
+import { ReporteVentas } from "./ReporteVentas";
+import { ReporteGastos } from "./ReporteGastos";
+import { ReporteFacturas } from "./ReporteFacturas";
+
+const dinero = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+const mesActual = new Date().toISOString().slice(0, 7);
+
+export function Reportes() {
+  const [mes, setMes] = useState(mesActual);
+  const { financiero, ventas, gastos, facturasPendientes, deudaProveedores, cargando, error } = useReportes(mes);
+
+  const imprimir = () => {
+    if (!financiero) return;
+    imprimirDocumento(
+      "Reporte mensual",
+      `<div class="summary">
+        <div><span>Dinero ingresado</span><strong>${dinero.format(financiero.dinero_ingresado)}</strong></div>
+        <div><span>Ganancia neta real</span><strong>${dinero.format(financiero.ganancia_neta_real)}</strong></div>
+        <div><span>Deuda con proveedores</span><strong>${dinero.format(deudaProveedores)}</strong></div>
+      </div>
+      <h2>Facturas de proveedores</h2>
+      <table>${facturasPendientes
+        .map((x) => `<tr><td>${escapar(x.numero_factura || x.id)}</td><td>${escapar(x.proveedor)}</td><td>${dinero.format(x.monto_total)}</td><td>${dinero.format(x.monto_total - x.saldo_pendiente)}</td><td>${escapar(x.fecha_emision)}</td></tr>`)
+        .join("")}</table>`
+    );
+  };
+
+  return (
+    <div className="module-page">
+      <div className="module-header">
+        <div>
+          <p className="eyebrow">Resumen financiero</p>
+          <h1>Reportes</h1>
+        </div>
+        <div className="header-actions">
+          <input type="month" value={mes} onChange={(e) => setMes(e.target.value)} />
+          <button className="btn btn--ghost" onClick={imprimir} disabled={!financiero}>
+            Imprimir / Generar PDF
+          </button>
+        </div>
+      </div>
+
+      {error && <p className="form-error">{error}</p>}
+      {cargando && !financiero ? (
+        <p>Cargando reporte…</p>
+      ) : (
+        <>
+          <ReporteKpis financiero={financiero} deudaProveedores={deudaProveedores} />
+          <div className="report-grid">
+            <ReporteVentas ventas={ventas} />
+            <ReporteGastos gastos={gastos} />
+            <ReporteFacturas facturas={facturasPendientes} />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
