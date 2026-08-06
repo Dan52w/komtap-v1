@@ -1,12 +1,761 @@
 import { useEffect, useMemo, useState } from "react";
 import { productos as productosApi, proveedores as api } from "../../lib/api";
 import { imprimirDocumento, escapar } from "../../lib/imprimir";
-import type { DetalleFactura, FacturaProveedor, ItemFactura, Proveedor, ResumenProveedor } from "../../types/proveedores";
+import type {
+  AbonoProveedor,
+  DetalleFactura,
+  FacturaProveedor,
+  ItemFactura,
+  Proveedor,
+  ResumenProveedor,
+} from "../../types/proveedores";
 import type { Producto } from "../../types/productos";
 import { Modal } from "../common/Modal";
-const dinero=new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0});const hoy=new Date().toISOString().slice(0,10);
-export function Proveedores(){const[p,setP]=useState<Proveedor[]>([]),[r,setR]=useState<ResumenProveedor[]>([]),[sel,setSel]=useState<number|null>(null),[f,setF]=useState<FacturaProveedor[]>([]),[crear,setCrear]=useState(false),[detalle,setDetalle]=useState<FacturaProveedor|null>(null),[error,setError]=useState<string|null>(null);const cargar=async()=>{const[a,b]=await Promise.all([api.listar(),api.resumen()]);setP(a);setR(b);setSel(x=>x??a[0]?.id??null)};useEffect(()=>{void cargar().catch(e=>setError(String(e)))},[]);useEffect(()=>{if(sel)api.listarFacturas(sel).then(setF).catch(e=>setError(String(e)))},[sel]);const deuda=(id:number|null)=>r.find(x=>x.proveedor_id===id)?.deuda_total??0;const proveedor=p.find(x=>x.id===sel);return <div className="module-page providers-page"><div className="module-header"><div><p className="eyebrow">Compras & cuentas por pagar</p><h1>Proveedores</h1><p>Productos, facturas y pagos organizados por proveedor.</p></div><button className="btn btn--primary" disabled={!sel} onClick={()=>setCrear(true)}>+ Agregar factura</button></div>{error&&<p className="form-error">{error}</p>}<section className="provider-workspace"><aside className="provider-list"><div className="provider-list__title"><span>Proveedores</span><strong>{p.length}</strong></div>{p.map(x=><button className={`provider-item ${x.id===sel?"active":""}`} key={x.id} onClick={()=>setSel(x.id)}><span>{x.nombre}</span><small>{deuda(x.id)?`Debe ${dinero.format(deuda(x.id))}`:"Sin saldo pendiente"}</small></button>)}</aside><section className="invoices-pane"><div className="invoices-pane__header"><div><p className="eyebrow">{proveedor?.nombre||"Selecciona un proveedor"}</p><h2>Facturas</h2></div><strong className="provider-debt">{dinero.format(deuda(sel))}<small>pendiente total</small></strong></div><div className="invoice-grid">{f.map(x=><article className="invoice-card" key={x.id}><div><span className={`status status--${x.estado_pago.toLowerCase()}`}>{x.estado_pago}</span><strong>{x.numero_factura||`Factura #${x.id}`}</strong><small>Emitida: {x.fecha_emision}</small></div><div className="invoice-card__footer"><span>Saldo <b>{dinero.format(x.saldo_pendiente)}</b></span><button className="btn btn--ghost" onClick={()=>setDetalle(x)}>Detalles</button></div></article>)}</div>{!f.length&&<div className="empty-card">No hay facturas para este proveedor.</div>}</section></section>{crear&&sel&&<FacturaModal proveedorId={sel} onCerrar={()=>setCrear(false)} onGuardar={async x=>{await api.crearFactura(x);setCrear(false);await cargar();setF(await api.listarFacturas(sel))}}/>}{detalle&&<Detalle factura={detalle} onCerrar={()=>setDetalle(null)} onCambio={async()=>{await cargar();setF(await api.listarFacturas(detalle.proveedor_id))}}/>}</div>}
-type Linea=ItemFactura&{etiqueta:string};const lineaNueva=():Linea=>({producto_id:null,nombre_nuevo:"",sku_nuevo:"",categoria_nueva:"General",talla_nueva:"",color_nuevo:"",cantidad:1,costo_unitario:0,precio_venta_sugerido:0,stock_minimo_nuevo:3,etiqueta:""});
-function FacturaModal({proveedorId,onCerrar,onGuardar}:{proveedorId:number;onCerrar:()=>void;onGuardar:(x:{proveedor_id:number;numero_factura:string|null;fecha_emision:string;fecha_limite_pago:string|null;items:ItemFactura[]})=>Promise<void>}){const[productos,setProductos]=useState<Producto[]>([]),[q,setQ]=useState(""),[actual,setActual]=useState<Linea>(lineaNueva()),[lineas,setLineas]=useState<Linea[]>([]),[numero,setNumero]=useState(""),[fecha,setFecha]=useState(hoy),[vence,setVence]=useState(""),[nuevo,setNuevo]=useState(false),[error,setError]=useState<string|null>(null);useEffect(()=>{productosApi.listar().then(setProductos)},[]);const coincidencias=useMemo(()=>productos.filter(x=>`${x.nombre} ${x.sku??""}`.toLowerCase().includes(q.toLowerCase())).slice(0,8),[productos,q]);const agregar=()=>{if(actual.cantidad<1||actual.costo_unitario<0||(!actual.producto_id&&!actual.nombre_nuevo?.trim()))return setError("Completa los datos del artículo.");setLineas([...lineas,{...actual,etiqueta:actual.producto_id?productos.find(x=>x.id===actual.producto_id)?.nombre??"Producto":actual.nombre_nuevo!}]);setActual(lineaNueva());setQ("");setNuevo(false);setError(null)};return <Modal titulo="Agregar factura de compra" onCerrar={onCerrar}><form className="form-grid" onSubmit={async e=>{e.preventDefault();if(!lineas.length)return setError("Agrega al menos un artículo.");try{await onGuardar({proveedor_id:proveedorId,numero_factura:numero||null,fecha_emision:fecha,fecha_limite_pago:vence||null,items:lineas})}catch(x){setError(String(x))}}}><div className="form-grid__cols-2"><div><label>Número</label><input value={numero} onChange={e=>setNumero(e.target.value)}/></div><div><label>Fecha</label><input type="date" value={fecha} onChange={e=>setFecha(e.target.value)}/></div></div><label>Vencimiento</label><input type="date" value={vence} onChange={e=>setVence(e.target.value)}/><div className="invoice-lines">{lineas.map((x,i)=><div className="report-row" key={i}><span>{x.etiqueta} · {x.cantidad} u.</span><b>{dinero.format(x.cantidad*x.costo_unitario)}</b><button type="button" className="danger-link" onClick={()=>setLineas(lineas.filter((_,n)=>n!==i))}>Quitar</button></div>)}</div><label>Buscar producto por nombre o código de barras</label><input value={q} onChange={e=>{setQ(e.target.value);setNuevo(false)}} placeholder="Escribe nombre o código"/>{q&&<div className="search-results">{coincidencias.map(x=><button type="button" key={x.id} onClick={()=>{setActual({...lineaNueva(),producto_id:x.id,etiqueta:x.nombre,costo_unitario:x.costo_unitario,precio_venta_sugerido:x.precio_venta});setQ(x.nombre)}}>{x.nombre} <small>{x.sku||"Sin código"}</small></button>)}<button type="button" onClick={()=>{setNuevo(true);setActual(lineaNueva())}}>+ Crear nuevo artículo</button></div>}{(actual.producto_id||nuevo)&&<><p className="form-hint">{nuevo?"Nuevo artículo":"Producto seleccionado: "+actual.etiqueta}</p>{nuevo&&<><div className="form-grid__cols-2"><div><label>Nombre</label><input value={actual.nombre_nuevo??""} onChange={e=>setActual({...actual,nombre_nuevo:e.target.value})}/></div><div><label>Código de barras / SKU</label><input value={actual.sku_nuevo??""} onChange={e=>setActual({...actual,sku_nuevo:e.target.value})}/></div></div><div className="form-grid__cols-2"><div><label>Categoría</label><input value={actual.categoria_nueva??""} onChange={e=>setActual({...actual,categoria_nueva:e.target.value})}/></div><div><label>Talla</label><input value={actual.talla_nueva??""} onChange={e=>setActual({...actual,talla_nueva:e.target.value})}/></div></div><label>Color</label><input value={actual.color_nuevo??""} onChange={e=>setActual({...actual,color_nuevo:e.target.value})}/></>}<div className="form-grid__cols-2"><div><label>Cantidad</label><input type="number" min="1" value={actual.cantidad} onChange={e=>setActual({...actual,cantidad:Number(e.target.value)})}/></div><div><label>Costo unitario</label><input type="number" min="0" value={actual.costo_unitario||""} onChange={e=>setActual({...actual,costo_unitario:Number(e.target.value)})}/></div></div><div className="form-grid__cols-2"><div><label>Precio de venta</label><input type="number" min="0" value={actual.precio_venta_sugerido||""} onChange={e=>setActual({...actual,precio_venta_sugerido:Number(e.target.value)})}/></div>{nuevo&&<div><label>Stock mínimo</label><input type="number" min="0" value={actual.stock_minimo_nuevo??3} onChange={e=>setActual({...actual,stock_minimo_nuevo:Number(e.target.value)})}/></div>}</div><button type="button" className="btn btn--ghost" onClick={agregar}>+ Añadir a la factura</button></>} {error&&<p className="form-error">{error}</p>}<div className="modal__acciones"><button type="button" className="btn btn--ghost" onClick={onCerrar}>Cancelar</button><button className="btn btn--primary">Registrar factura ({lineas.length})</button></div></form></Modal>}
-function Detalle({factura,onCerrar,onCambio}:{factura:FacturaProveedor;onCerrar:()=>void;onCambio:()=>Promise<void>}){const[items,setItems]=useState<DetalleFactura[]>([]),[abonos,setAbonos]=useState<any[]>([]),[abonar,setAbonar]=useState(false);const cargar=async()=>{const[i,a]=await Promise.all([api.listarItemsFactura(factura.id),api.listarAbonos(factura.id)]);setItems(i);setAbonos(a)};useEffect(()=>{void cargar()},[]);const abonado=factura.monto_total-factura.saldo_pendiente;const imprimir=()=>imprimirDocumento("Comprobante de egreso",`<div class="summary"><div><span>Total de la compra</span><strong>${dinero.format(factura.monto_total)}</strong></div><div><span>Total abonado</span><strong>${dinero.format(abonado)}</strong></div><div><span>Saldo por deber</span><strong>${dinero.format(factura.saldo_pendiente)}</strong></div></div><h2>Detalles de compra</h2><table><tr><th>Artículo</th><th>Cantidad</th><th class="right">Subtotal</th></tr>${items.map(x=>`<tr><td>${escapar(x.producto_nombre)}</td><td>${x.cantidad}</td><td class="right">${dinero.format(x.subtotal)}</td></tr>`).join("")}</table><h2>Abonos</h2><table><tr><th>Fecha</th><th>Método</th><th>Referencia</th><th class="right">Monto</th></tr>${abonos.map(x=>`<tr><td>${escapar(x.fecha)}</td><td>${escapar(x.metodo_pago)}</td><td>${escapar(x.numero_referencia||"-")}</td><td class="right">${dinero.format(x.monto)}</td></tr>`).join("")}</table>`);return <Modal titulo="Detalle de factura" onCerrar={onCerrar}><div className="detail-summary"><span>Total<strong>{dinero.format(factura.monto_total)}</strong></span><span>Abonado<strong>{dinero.format(abonado)}</strong></span><span>Saldo<strong>{dinero.format(factura.saldo_pendiente)}</strong></span></div><button className="btn btn--ghost" onClick={imprimir}>Imprimir / Generar PDF</button><h4>Artículos</h4>{items.map(x=><div className="report-row" key={x.id}><span>{x.producto_nombre} · {x.cantidad} u.</span><b>{dinero.format(x.subtotal)}</b></div>)}<div className="modal-section-head"><h4>Abonos</h4>{factura.saldo_pendiente>0&&<button className="btn btn--primary" onClick={()=>setAbonar(true)}>Registrar abono</button>}</div>{abonos.map(x=><div className="report-row" key={x.id}><span>{x.fecha.slice(0,10)} · {x.metodo_pago}</span><b>{dinero.format(x.monto)}</b></div>)}{abonar&&<Abono saldo={factura.saldo_pendiente} onCerrar={()=>setAbonar(false)} onGuardar={async x=>{await api.registrarAbono(factura.id,x);await cargar();await onCambio();onCerrar()}}/>}</Modal>}
-function Abono({saldo,onCerrar,onGuardar}:{saldo:number;onCerrar:()=>void;onGuardar:(x:any)=>Promise<void>}){const[monto,setMonto]=useState(0),[metodo,setMetodo]=useState("Efectivo"),[referencia,setReferencia]=useState(""),[fecha,setFecha]=useState(hoy),[nota,setNota]=useState("");return <form className="abono-form" onSubmit={async e=>{e.preventDefault();if(monto<=0||monto>saldo)return;await onGuardar({monto,metodo_pago:metodo,numero_referencia:referencia||null,fecha,nota:nota||null})}}><h4>Nuevo abono</h4><input type="number" max={saldo} min="1" placeholder="Monto" value={monto||""} onChange={e=>setMonto(Number(e.target.value))}/><select value={metodo} onChange={e=>setMetodo(e.target.value)}>{["Efectivo","Transferencia bancaria","Consignación"].map(x=><option key={x}>{x}</option>)}</select>{metodo!=="Efectivo"&&<input required placeholder="Referencia" value={referencia} onChange={e=>setReferencia(e.target.value)}/>}<input type="date" value={fecha} onChange={e=>setFecha(e.target.value)}/><textarea placeholder="Nota" value={nota} onChange={e=>setNota(e.target.value)}/><button className="btn btn--primary">Guardar abono</button><button type="button" className="btn btn--ghost" onClick={onCerrar}>Cancelar</button></form>}
+
+const dinero = new Intl.NumberFormat("es-CO", {
+  style: "currency",
+  currency: "COP",
+  maximumFractionDigits: 0,
+});
+
+const hoy = new Date().toISOString().slice(0, 10);
+
+export function Proveedores() {
+  const [p, setP] = useState<Proveedor[]>([]);
+  const [r, setR] = useState<ResumenProveedor[]>([]);
+  const [sel, setSel] = useState<number | null>(null);
+  const [f, setF] = useState<FacturaProveedor[]>([]);
+  const [crear, setCrear] = useState(false);
+  const [detalle, setDetalle] = useState<FacturaProveedor | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const cargar = async () => {
+    const [a, b] = await Promise.all([api.listar(), api.resumen()]);
+    setP(a);
+    setR(b);
+    setSel((x) => x ?? a[0]?.id ?? null);
+  };
+
+  useEffect(() => {
+    void cargar().catch((e) => setError(String(e)));
+  }, []);
+
+  useEffect(() => {
+    if (sel) {
+      api.listarFacturas(sel).then(setF).catch((e) => setError(String(e)));
+    }
+  }, [sel]);
+
+  const deuda = (id: number | null) =>
+    r.find((x) => x.proveedor_id === id)?.deuda_total ?? 0;
+
+  const proveedor = p.find((x) => x.id === sel);
+
+  return (
+    <div className="module-page providers-page">
+      <div className="module-header">
+        <div>
+          <p className="eyebrow">Compras & cuentas por pagar</p>
+          <h1>Proveedores</h1>
+          <p>Productos, facturas y pagos organizados por proveedor.</p>
+        </div>
+        <button
+          className="btn btn--primary"
+          disabled={!sel}
+          onClick={() => setCrear(true)}
+        >
+          + Agregar factura
+        </button>
+      </div>
+
+      {error && <p className="form-error">{error}</p>}
+
+      <section className="provider-workspace">
+        <aside className="provider-list">
+          <div className="provider-list__title">
+            <span>Proveedores</span>
+            <strong>{p.length}</strong>
+          </div>
+          {p.map((x) => (
+            <button
+              className={`provider-item ${x.id === sel ? "active" : ""}`}
+              key={x.id}
+              onClick={() => setSel(x.id)}
+            >
+              <span>{x.nombre}</span>
+              <small>
+                {deuda(x.id)
+                  ? `Debe ${dinero.format(deuda(x.id))}`
+                  : "Sin saldo pendiente"}
+              </small>
+            </button>
+          ))}
+        </aside>
+
+        <section className="invoices-pane">
+          <div className="invoices-pane__header">
+            <div>
+              <p className="eyebrow">
+                {proveedor?.nombre || "Selecciona un proveedor"}
+              </p>
+              <h2>Facturas</h2>
+            </div>
+            <strong className="provider-debt">
+              {dinero.format(deuda(sel))}
+              <small>pendiente total</small>
+            </strong>
+          </div>
+
+          <div className="invoice-grid">
+            {f.map((x) => (
+              <article className="invoice-card" key={x.id}>
+                <div>
+                  <span
+                    className={`status status--${x.estado_pago.toLowerCase()}`}
+                  >
+                    {x.estado_pago}
+                  </span>
+                  <strong>{x.numero_factura || `Factura #${x.id}`}</strong>
+                  <small>Emitida: {x.fecha_emision}</small>
+                </div>
+                <div className="invoice-card__footer">
+                  <span>
+                    Saldo <b>{dinero.format(x.saldo_pendiente)}</b>
+                  </span>
+                  <button
+                    className="btn btn--ghost"
+                    onClick={() => setDetalle(x)}
+                  >
+                    Detalles
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          {!f.length && (
+            <div className="empty-card">
+              No hay facturas para este proveedor.
+            </div>
+          )}
+        </section>
+      </section>
+
+      {crear && sel && (
+        <FacturaModal
+          proveedorId={sel}
+          onCerrar={() => setCrear(false)}
+          onGuardar={async (x) => {
+            await api.crearFactura(x);
+            setCrear(false);
+            await cargar();
+            setF(await api.listarFacturas(sel));
+          }}
+        />
+      )}
+
+      {detalle && (
+        <Detalle
+          factura={detalle}
+          onCerrar={() => setDetalle(null)}
+          onCambio={async () => {
+            await cargar();
+            setF(await api.listarFacturas(detalle.proveedor_id));
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+type Linea = ItemFactura & { etiqueta: string };
+
+const lineaNueva = (): Linea => ({
+  producto_id: null,
+  nombre_nuevo: "",
+  sku_nuevo: "",
+  categoria_nueva: "General",
+  talla_nueva: "",
+  color_nuevo: "",
+  cantidad: 1,
+  costo_unitario: 0,
+  precio_venta_sugerido: 0,
+  stock_minimo_nuevo: 3,
+  etiqueta: "",
+});
+
+function FacturaModal({
+  proveedorId,
+  onCerrar,
+  onGuardar,
+}: {
+  proveedorId: number;
+  onCerrar: () => void;
+  onGuardar: (x: {
+    proveedor_id: number;
+    numero_factura: string | null;
+    fecha_emision: string;
+    fecha_limite_pago: string | null;
+    items: ItemFactura[];
+  }) => Promise<void>;
+}) {
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [q, setQ] = useState("");
+  const [actual, setActual] = useState<Linea>(lineaNueva());
+  const [lineas, setLineas] = useState<Linea[]>([]);
+  const [numero, setNumero] = useState("");
+  const [fecha, setFecha] = useState(hoy);
+  const [vence, setVence] = useState("");
+  const [nuevo, setNuevo] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    productosApi.listar().then(setProductos);
+  }, []);
+
+  const coincidencias = useMemo(
+    () =>
+      productos
+        .filter((x) =>
+          `${x.nombre} ${x.sku ?? ""}`
+            .toLowerCase()
+            .includes(q.toLowerCase())
+        )
+        .slice(0, 8),
+    [productos, q]
+  );
+
+  const agregar = () => {
+    if (
+      actual.cantidad < 1 ||
+      actual.costo_unitario < 0 ||
+      (!actual.producto_id && !actual.nombre_nuevo?.trim())
+    ) {
+      return setError("Completa los datos del artículo.");
+    }
+
+    setLineas([
+      ...lineas,
+      {
+        ...actual,
+        etiqueta: actual.producto_id
+          ? productos.find((x) => x.id === actual.producto_id)?.nombre ??
+            "Producto"
+          : actual.nombre_nuevo!,
+      },
+    ]);
+    setActual(lineaNueva());
+    setQ("");
+    setNuevo(false);
+    setError(null);
+  };
+
+  return (
+    <Modal titulo="Agregar factura de compra" onCerrar={onCerrar}>
+      <form
+        className="form-grid"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          if (!lineas.length) return setError("Agrega al menos un artículo.");
+          try {
+            await onGuardar({
+              proveedor_id: proveedorId,
+              numero_factura: numero || null,
+              fecha_emision: fecha,
+              fecha_limite_pago: vence || null,
+              items: lineas,
+            });
+          } catch (x) {
+            setError(String(x));
+          }
+        }}
+      >
+        <div className="form-grid__cols-2">
+          <div>
+            <label>Número</label>
+            <input
+              value={numero}
+              onChange={(e) => setNumero(e.target.value)}
+            />
+          </div>
+          <div>
+            <label>Fecha</label>
+            <input
+              type="date"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <label>Vencimiento</label>
+        <input
+          type="date"
+          value={vence}
+          onChange={(e) => setVence(e.target.value)}
+        />
+
+        <div className="invoice-lines">
+          {lineas.map((x, i) => (
+            <div className="report-row" key={i}>
+              <span>
+                {x.etiqueta} · {x.cantidad} u.
+              </span>
+              <b>{dinero.format(x.cantidad * x.costo_unitario)}</b>
+              <button
+                type="button"
+                className="danger-link"
+                onClick={() => setLineas(lineas.filter((_, n) => n !== i))}
+              >
+                Quitar
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <label>Buscar producto por nombre o código de barras</label>
+        <input
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setNuevo(false);
+          }}
+          placeholder="Escribe nombre o código"
+        />
+
+        {q && (
+          <div className="search-results">
+            {coincidencias.map((x) => (
+              <button
+                type="button"
+                key={x.id}
+                onClick={() => {
+                  setActual({
+                    ...lineaNueva(),
+                    producto_id: x.id,
+                    etiqueta: x.nombre,
+                    costo_unitario: x.costo_unitario,
+                    precio_venta_sugerido: x.precio_venta,
+                  });
+                  setQ(x.nombre);
+                }}
+              >
+                {x.nombre} <small>{x.sku || "Sin código"}</small>
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setNuevo(true);
+                setActual(lineaNueva());
+              }}
+            >
+              + Crear nuevo artículo
+            </button>
+          </div>
+        )}
+
+        {(actual.producto_id || nuevo) && (
+          <>
+            <p className="form-hint">
+              {nuevo
+                ? "Nuevo artículo"
+                : "Producto seleccionado: " + actual.etiqueta}
+            </p>
+            {nuevo && (
+              <>
+                <div className="form-grid__cols-2">
+                  <div>
+                    <label>Nombre</label>
+                    <input
+                      value={actual.nombre_nuevo ?? ""}
+                      onChange={(e) =>
+                        setActual({ ...actual, nombre_nuevo: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label>Código de barras / SKU</label>
+                    <input
+                      value={actual.sku_nuevo ?? ""}
+                      onChange={(e) =>
+                        setActual({ ...actual, sku_nuevo: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="form-grid__cols-2">
+                  <div>
+                    <label>Categoría</label>
+                    <input
+                      value={actual.categoria_nueva ?? ""}
+                      onChange={(e) =>
+                        setActual({
+                          ...actual,
+                          categoria_nueva: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label>Talla</label>
+                    <input
+                      value={actual.talla_nueva ?? ""}
+                      onChange={(e) =>
+                        setActual({ ...actual, talla_nueva: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+                <label>Color</label>
+                <input
+                  value={actual.color_nuevo ?? ""}
+                  onChange={(e) =>
+                    setActual({ ...actual, color_nuevo: e.target.value })
+                  }
+                />
+              </>
+            )}
+
+            <div className="form-grid__cols-2">
+              <div>
+                <label>Cantidad</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={actual.cantidad}
+                  onChange={(e) =>
+                    setActual({ ...actual, cantidad: Number(e.target.value) })
+                  }
+                />
+              </div>
+              <div>
+                <label>Costo unitario</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={actual.costo_unitario || ""}
+                  onChange={(e) =>
+                    setActual({
+                      ...actual,
+                      costo_unitario: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="form-grid__cols-2">
+              <div>
+                <label>Precio de venta</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={actual.precio_venta_sugerido || ""}
+                  onChange={(e) =>
+                    setActual({
+                      ...actual,
+                      precio_venta_sugerido: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+              {nuevo && (
+                <div>
+                  <label>Stock mínimo</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={actual.stock_minimo_nuevo ?? 3}
+                    onChange={(e) =>
+                      setActual({
+                        ...actual,
+                        stock_minimo_nuevo: Number(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+              )}
+            </div>
+
+            <button type="button" className="btn btn--ghost" onClick={agregar}>
+              + Añadir a la factura
+            </button>
+          </>
+        )}
+
+        {error && <p className="form-error">{error}</p>}
+
+        <div className="modal__acciones">
+          <button type="button" className="btn btn--ghost" onClick={onCerrar}>
+            Cancelar
+          </button>
+          <button className="btn btn--primary">
+            Registrar factura ({lineas.length})
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function Detalle({
+  factura,
+  onCerrar,
+  onCambio,
+}: {
+  factura: FacturaProveedor;
+  onCerrar: () => void;
+  onCambio: () => Promise<void>;
+}) {
+  const [items, setItems] = useState<DetalleFactura[]>([]);
+  const [abonos, setAbonos] = useState<AbonoProveedor[]>([]);
+  const [abonar, setAbonar] = useState(false);
+
+  const cargar = async () => {
+    const [i, a] = await Promise.all([
+      api.listarItemsFactura(factura.id),
+      api.listarAbonos(factura.id),
+    ]);
+    setItems(i);
+    setAbonos(a);
+  };
+
+  useEffect(() => {
+    void cargar();
+  }, []);
+
+  const abonado = factura.monto_total - factura.saldo_pendiente;
+  const vencida =
+    !!factura.fecha_limite_pago &&
+    factura.saldo_pendiente > 0 &&
+    factura.fecha_limite_pago < hoy;
+
+  const imprimir = () =>
+    imprimirDocumento(
+      "Comprobante de egreso",
+      `<div class="summary">
+        <div><span>Total de la compra</span><strong>${dinero.format(factura.monto_total)}</strong></div>
+        <div><span>Total abonado</span><strong>${dinero.format(abonado)}</strong></div>
+        <div><span>Saldo por deber</span><strong>${dinero.format(factura.saldo_pendiente)}</strong></div>
+      </div>
+      <p><strong>Factura:</strong> ${escapar(factura.numero_factura || `#${factura.id}`)} &nbsp;·&nbsp;
+         <strong>Estado:</strong> ${escapar(factura.estado_pago)} &nbsp;·&nbsp;
+         <strong>Emitida:</strong> ${escapar(factura.fecha_emision)}
+         ${factura.fecha_limite_pago ? ` &nbsp;·&nbsp; <strong>Vence:</strong> ${escapar(factura.fecha_limite_pago)}` : ""}</p>
+      <h2>Detalles de compra</h2>
+      <table>
+        <tr><th>Artículo</th><th>Cantidad</th><th>Costo unit.</th><th class="right">Subtotal</th></tr>
+        ${items.map((x) => `<tr><td>${escapar(x.producto_nombre)}</td><td>${x.cantidad}</td><td>${dinero.format(x.costo_unitario)}</td><td class="right">${dinero.format(x.subtotal)}</td></tr>`).join("")}
+      </table>
+      <h2>Abonos</h2>
+      <table>
+        <tr><th>Fecha</th><th>Método</th><th>Referencia</th><th>Nota</th><th class="right">Monto</th></tr>
+        ${abonos.map((x) => `<tr><td>${escapar(x.fecha)}</td><td>${escapar(x.metodo_pago)}${(x as any).banco ? " · " + escapar((x as any).banco) : ""}</td><td>${escapar(x.numero_referencia || "-")}</td><td>${escapar(x.nota || "-")}</td><td class="right">${dinero.format(x.monto)}</td></tr>`).join("")}
+      </table>`
+    );
+
+  return (
+    <Modal
+      titulo={
+        factura.numero_factura
+          ? `Factura ${factura.numero_factura}`
+          : `Factura #${factura.id}`
+      }
+      onCerrar={onCerrar}
+    >
+      <div className="detalle-factura">
+        <div className="detalle-factura__meta">
+          <span
+            className={`status status--${factura.estado_pago.toLowerCase()}`}
+          >
+            {factura.estado_pago}
+          </span>
+          <span>Emitida: {factura.fecha_emision}</span>
+          {factura.fecha_limite_pago && (
+            <span className={vencida ? "detalle-factura__vencida" : ""}>
+              Vence: {factura.fecha_limite_pago}
+              {vencida ? " (vencida)" : ""}
+            </span>
+          )}
+        </div>
+
+        <div className="detail-summary">
+          <span>
+            Total<strong>{dinero.format(factura.monto_total)}</strong>
+          </span>
+          <span>
+            Abonado<strong>{dinero.format(abonado)}</strong>
+          </span>
+          <span>
+            Saldo<strong>{dinero.format(factura.saldo_pendiente)}</strong>
+          </span>
+        </div>
+
+        <button className="btn btn--ghost" onClick={imprimir}>
+          Imprimir / Generar PDF
+        </button>
+
+        <h4>Artículos ({items.length})</h4>
+        {items.length === 0 ? (
+          <p className="empty-state">Sin artículos.</p>
+        ) : (
+          <div className="tabla-card">
+            <table className="tabla-base">
+              <thead>
+                <tr>
+                  <th>Artículo</th>
+                  <th>Cantidad</th>
+                  <th>Costo unit.</th>
+                  <th>Precio sugerido</th>
+                  <th className="amount">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((x) => (
+                  <tr key={x.id}>
+                    <td>{x.producto_nombre}</td>
+                    <td>{x.cantidad}</td>
+                    <td>{dinero.format(x.costo_unitario)}</td>
+                    <td>
+                      {x.precio_venta_sugerido != null
+                        ? dinero.format(x.precio_venta_sugerido)
+                        : "—"}
+                    </td>
+                    <td className="amount">{dinero.format(x.subtotal)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="modal-section-head">
+          <h4>Abonos ({abonos.length})</h4>
+          {factura.saldo_pendiente > 0 && (
+            <button
+              className="btn btn--primary"
+              onClick={() => setAbonar(true)}
+            >
+              Registrar abono
+            </button>
+          )}
+        </div>
+        {abonos.length === 0 ? (
+          <p className="empty-state">Aún no se han registrado abonos.</p>
+        ) : (
+          <div className="tabla-card">
+            <table className="tabla-base">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Método</th>
+                  <th>Referencia</th>
+                  <th>Nota</th>
+                  <th className="amount">Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {abonos.map((x) => (
+                  <tr key={x.id}>
+                    <td>{x.fecha.slice(0, 16).replace("T", " ")}</td>
+                    <td>
+                      {x.metodo_pago}
+                      {(x as any).banco ? ` · ${(x as any).banco}` : ""}
+                    </td>
+                    <td>{x.numero_referencia || "—"}</td>
+                    <td>{x.nota || "—"}</td>
+                    <td className="amount">{dinero.format(x.monto)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {abonar && (
+          <Abono
+            saldo={factura.saldo_pendiente}
+            onCerrar={() => setAbonar(false)}
+            onGuardar={async (x) => {
+              await api.registrarAbono(factura.id, x);
+              await cargar();
+              await onCambio();
+              onCerrar();
+            }}
+          />
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function Abono({
+  saldo,
+  onCerrar,
+  onGuardar,
+}: {
+  saldo: number;
+  onCerrar: () => void;
+  onGuardar: (x: any) => Promise<void>;
+}) {
+  const [monto, setMonto] = useState(0);
+  const [metodo, setMetodo] = useState("Efectivo");
+  const [referencia, setReferencia] = useState("");
+  const [fecha, setFecha] = useState(hoy);
+  const [nota, setNota] = useState("");
+
+  return (
+    <form
+      className="abono-form"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (monto <= 0 || monto > saldo) return;
+        await onGuardar({
+          monto,
+          metodo_pago: metodo,
+          numero_referencia: referencia || null,
+          fecha,
+          nota: nota || null,
+        });
+      }}
+    >
+      <h4>Nuevo abono</h4>
+      <input
+        type="number"
+        max={saldo}
+        min="1"
+        placeholder="Monto"
+        value={monto || ""}
+        onChange={(e) => setMonto(Number(e.target.value))}
+      />
+      <select value={metodo} onChange={(e) => setMetodo(e.target.value)}>
+        {["Efectivo", "Transferencia bancaria", "Consignación"].map((x) => (
+          <option key={x}>{x}</option>
+        ))}
+      </select>
+      {metodo !== "Efectivo" && (
+        <input
+          required
+          placeholder="Referencia"
+          value={referencia}
+          onChange={(e) => setReferencia(e.target.value)}
+        />
+      )}
+      <input
+        type="date"
+        value={fecha}
+        onChange={(e) => setFecha(e.target.value)}
+      />
+      <textarea
+        placeholder="Nota"
+        value={nota}
+        onChange={(e) => setNota(e.target.value)}
+      />
+      <button className="btn btn--primary">Guardar abono</button>
+      <button type="button" className="btn btn--ghost" onClick={onCerrar}>
+        Cancelar
+      </button>
+    </form>
+  );
+}
