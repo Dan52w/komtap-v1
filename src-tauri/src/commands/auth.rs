@@ -2,6 +2,7 @@ use crate::db::DbConnection;
 use bcrypt::{hash, verify, DEFAULT_COST};
 use serde::{Deserialize, Serialize};
 use tauri::State;
+use crate::licencia::{verificar_codigo, TipoLicencia};
 
 // TODO: reemplazar por la lógica real de generación/validación de códigos
 // (firma criptográfica, servidor de licencias, etc.) antes de distribuir.
@@ -75,49 +76,43 @@ pub fn estado_licencia(state: State<DbConnection>) -> Result<EstadoLicencia, Str
 
 #[tauri::command]
 pub fn activar_licencia(state: State<DbConnection>, codigo: String) -> Result<EstadoLicencia, String> {
-    let codigo = codigo.trim();
+    let payload = verificar_codigo(&codigo)?;
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
 
-    if CODIGOS_PERMANENTES.contains(&codigo) {
-        let conn = state.0.lock().map_err(|e| e.to_string())?;
-        conn.execute(
-            "INSERT INTO licencia_sistema (id, codigo_activacion, tipo_licencia, fecha_expiracion, estado)
-             VALUES (1, ?1, 'permanente', NULL, 'activa')
-             ON CONFLICT(id) DO UPDATE SET
-                codigo_activacion = excluded.codigo_activacion,
-                tipo_licencia = 'permanente',
-                fecha_expiracion = NULL,
-                estado = 'activa'",
-            [codigo],
-        ).map_err(|e| e.to_string())?;
-
-        return Ok(EstadoLicencia { activa: true, tipo_licencia: Some("permanente".to_string()), fecha_expiracion: None });
-    }
-
-    if let Some((_, dias)) = CODIGOS_TEMPORALES.iter().find(|(c, _)| *c == codigo) {
-        let conn = state.0.lock().map_err(|e| e.to_string())?;
-        let fecha_expiracion: String = conn
-            .query_row(
+    match payload.tipo {
+        TipoLicencia::Permanente => {
+            conn.execute(
+                "INSERT INTO licencia_sistema (id, codigo_activacion, tipo_licencia, fecha_expiracion, estado)
+                 VALUES (1, ?1, 'permanente', NULL, 'activa')
+                 ON CONFLICT(id) DO UPDATE SET
+                    codigo_activacion = excluded.codigo_activacion,
+                    tipo_licencia = 'permanente',
+                    fecha_expiracion = NULL,
+                    estado = 'activa'",
+                [&codigo],
+            ).map_err(|e| e.to_string())?;
+            Ok(EstadoLicencia { activa: true, tipo_licencia: Some("permanente".into()), fecha_expiracion: None })
+        }
+        TipoLicencia::Temporal => {
+            let fecha_expiracion: String = conn.query_row(
                 "SELECT datetime('now','localtime', ?1)",
-                [format!("+{dias} days")],
+                [format!("+{} days", payload.dias)],
                 |row| row.get(0),
-            )
-            .map_err(|e| e.to_string())?;
+            ).map_err(|e| e.to_string())?;
 
-        conn.execute(
-            "INSERT INTO licencia_sistema (id, codigo_activacion, tipo_licencia, fecha_expiracion, estado)
-             VALUES (1, ?1, 'temporal', ?2, 'activa')
-             ON CONFLICT(id) DO UPDATE SET
-                codigo_activacion = excluded.codigo_activacion,
-                tipo_licencia = 'temporal',
-                fecha_expiracion = excluded.fecha_expiracion,
-                estado = 'activa'",
-            (codigo, &fecha_expiracion),
-        ).map_err(|e| e.to_string())?;
-
-        return Ok(EstadoLicencia { activa: true, tipo_licencia: Some("temporal".to_string()), fecha_expiracion: Some(fecha_expiracion) });
+            conn.execute(
+                "INSERT INTO licencia_sistema (id, codigo_activacion, tipo_licencia, fecha_expiracion, estado)
+                 VALUES (1, ?1, 'temporal', ?2, 'activa')
+                 ON CONFLICT(id) DO UPDATE SET
+                    codigo_activacion = excluded.codigo_activacion,
+                    tipo_licencia = 'temporal',
+                    fecha_expiracion = excluded.fecha_expiracion,
+                    estado = 'activa'",
+                (&codigo, &fecha_expiracion),
+            ).map_err(|e| e.to_string())?;
+            Ok(EstadoLicencia { activa: true, tipo_licencia: Some("temporal".into()), fecha_expiracion: Some(fecha_expiracion) })
+        }
     }
-
-    Err("Código de licencia no válido".to_string())
 }
 
 // ===== REGISTRO DE USUARIO ÚNICO (se desactiva permanentemente tras el primero) =====
