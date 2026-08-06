@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Komtap - Gestión de proveedores, inventario, ventas y contabilidad"
 authors = ["you"]
 edition = "2021"
+default-run = "komtap"
 
 [lib]
 name = "komtap_lib"
@@ -23,3 +24,5 @@ bcrypt = "0.15"
 hmac = "0.12"
 sha2 = "0.10"
 base32 = "0.5"
+hex = "0.4"
+rand = "0.8"

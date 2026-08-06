@@ -1,15 +1,10 @@
 use hmac::{Hmac, Mac};
+use rand::Rng;
 use sha2::Sha256;
 
 type HmacSha256 = Hmac<Sha256>;
 
-/// Clave secreta de firma. En un mundo ideal esto NO vive en texto plano
-/// en el código fuente ni en el binario final: se inyecta en build time
-/// via variable de entorno (ver nota abajo sobre ofuscación / build.rs).
-/// Aun así, esto es enormemente mejor que una lista estática de códigos:
-/// alguien tendría que extraer la clave del binario y entender el formato
-/// del payload para poder *generar* códigos válidos, en vez de simplemente
-/// leerlos con `strings`.
+/// Clave secreta de firma, inyectada en build time vía KOMTAP_LICENSE_KEY.
 const CLAVE_SECRETA: &[u8] = env!("KOMTAP_LICENSE_KEY").as_bytes();
 
 #[derive(Debug, Clone)]
@@ -24,12 +19,16 @@ pub enum TipoLicencia {
     Temporal = 1,
 }
 
-/// Genera un código de activación firmado. Se usa en una herramienta CLI
-/// aparte (no distribuida con la app) para emitir licencias a clientes.
+/// Genera un código de activación firmado. El payload incluye un nonce
+/// aleatorio de 4 bytes para que cada código sea único, incluso si se
+/// generan varios con el mismo tipo y duración.
 pub fn generar_codigo(tipo: TipoLicencia, dias: u16) -> String {
-    let mut payload = Vec::with_capacity(3);
+    let nonce: u32 = rand::thread_rng().gen();
+
+    let mut payload = Vec::with_capacity(7);
     payload.push(tipo as u8);
     payload.extend_from_slice(&dias.to_be_bytes());
+    payload.extend_from_slice(&nonce.to_be_bytes());
 
     let mut mac = HmacSha256::new_from_slice(CLAVE_SECRETA).expect("clave HMAC inválida");
     mac.update(&payload);
@@ -42,7 +41,7 @@ pub fn generar_codigo(tipo: TipoLicencia, dias: u16) -> String {
     format!("KOMTAP-{payload_b32}-{firma_hex}").to_uppercase()
 }
 
-/// Verifica un código de activación. Devuelve el payload si la firma es válida.
+/// Verifica un código de activación. Devuelve el payload (tipo y días) si la firma es válida.
 pub fn verificar_codigo(codigo: &str) -> Result<PayloadLicencia, String> {
     let codigo = codigo.trim().to_uppercase();
     let partes: Vec<&str> = codigo.split('-').collect();
@@ -56,20 +55,22 @@ pub fn verificar_codigo(codigo: &str) -> Result<PayloadLicencia, String> {
 
     let payload = base32::decode(base32::Alphabet::Crockford, payload_b32)
         .ok_or("Código corrupto o ilegible")?;
-    if payload.len() != 3 {
+    if payload.len() != 7 {
         return Err("Código corrupto o ilegible".to_string());
     }
 
     let firma_recibida = hex::decode(firma_hex).map_err(|_| "Código corrupto o ilegible")?;
+    if firma_recibida.len() != 8 {
+        return Err("Código corrupto o ilegible".to_string());
+    }
 
     let mut mac = HmacSha256::new_from_slice(CLAVE_SECRETA).expect("clave HMAC inválida");
     mac.update(&payload);
-    // verify_slice usa comparación en tiempo constante (protege contra timing attacks)
-    mac.verify_slice(&firma_recibida[..]).map_err(|_| "Código de licencia no válido")?;
+    let firma_calculada = mac.finalize().into_bytes();
 
-    // Nota: verify_slice espera el largo completo del HMAC (32 bytes); si truncaste
-    // la firma a 8 bytes al generar, aquí debes comparar manualmente los primeros
-    // 8 bytes recalculados en vez de usar verify_slice directo. Ver alternativa abajo.
+    if firma_recibida.as_slice() != &firma_calculada[..8] {
+        return Err("Código de licencia no válido".to_string());
+    }
 
     let tipo = match payload[0] {
         0 => TipoLicencia::Permanente,
@@ -77,6 +78,7 @@ pub fn verificar_codigo(codigo: &str) -> Result<PayloadLicencia, String> {
         _ => return Err("Código corrupto o ilegible".to_string()),
     };
     let dias = u16::from_be_bytes([payload[1], payload[2]]);
+    // payload[3..7] es el nonce; no se usa después de verificar la firma.
 
     Ok(PayloadLicencia { tipo, dias })
 }

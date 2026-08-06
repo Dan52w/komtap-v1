@@ -10,11 +10,6 @@ use crate::licencia::{verificar_codigo, TipoLicencia};
 // contra un catálogo estático de códigos válidos.
 //
 // Formato sugerido de código: KOMTAP-<TIPO>-<DURACION_O_PERM>-<HASH>
-const CODIGOS_PERMANENTES: &[&str] = &["KOMTAP-PERM-0000-A1B2"];
-const CODIGOS_TEMPORALES: &[(&str, i64)] = &[
-    ("KOMTAP-TEMP-0030-C3D4", 30),   // 30 días
-    ("KOMTAP-TEMP-0365-E5F6", 365),  // 1 año
-];
 const CODIGO_MAESTRO_REGISTRO: &str = "KOMTAP-MASTER-0000-Z9Y8";
 
 #[derive(Serialize, Deserialize)]

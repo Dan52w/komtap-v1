@@ -1,6 +1,7 @@
 mod db;
 mod models;
 mod commands;
+pub mod licencia; 
 
 use db::{init_db, DbConnection};
 use std::sync::Mutex;
