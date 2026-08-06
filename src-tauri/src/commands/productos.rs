@@ -151,11 +151,24 @@ pub fn eliminar_producto(state: State<DbConnection>, producto_id: i64) -> Result
         "SELECT COUNT(*) FROM items_venta WHERE producto_id = ?1", [producto_id], |row| row.get(0),
     ).map_err(|e| e.to_string())?;
     if ventas_asociadas > 0 {
-        // En vez de bloquear por completo, se recomienda marcar como inactivo.
         return Err("No se puede eliminar: el producto tiene ventas asociadas. Márquelo como inactivo.".to_string());
     }
 
-    conn.execute("DELETE FROM productos WHERE id = ?1", [producto_id]).map_err(|e| e.to_string())?;
+    let compras_asociadas: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM items_factura_proveedor WHERE producto_id = ?1", [producto_id], |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+    if compras_asociadas > 0 {
+        return Err("No se puede eliminar: el producto tiene compras registradas a proveedores. Márquelo como inactivo.".to_string());
+    }
+
+    conn.execute("DELETE FROM productos WHERE id = ?1", [producto_id]).map_err(|e| {
+        let msg = e.to_string();
+        if msg.contains("FOREIGN KEY") || msg.contains("constraint") {
+            "No se puede eliminar: el producto todavía tiene registros relacionados. Márquelo como inactivo.".to_string()
+        } else {
+            msg
+        }
+    })?;
     Ok(())
 }
 
