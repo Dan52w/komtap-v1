@@ -4,12 +4,8 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use crate::licencia::{verificar_codigo, TipoLicencia};
 
-// TODO: reemplazar por la lógica real de generación/validación de códigos
-// (firma criptográfica, servidor de licencias, etc.) antes de distribuir.
-// Al ser una app 100% offline (HU-10), por ahora la validación es local
-// contra un catálogo estático de códigos válidos.
-//
-// Formato sugerido de código: KOMTAP-<TIPO>-<DURACION_O_PERM>-<HASH>
+/// Código maestro requerido para registrar el usuario administrador único.
+/// No está relacionado con el licenciamiento (eso se maneja en `licencia.rs`).
 const CODIGO_MAESTRO_REGISTRO: &str = "KOMTAP-MASTER-0000-Z9Y8";
 
 #[derive(Serialize, Deserialize)]
@@ -69,14 +65,30 @@ pub fn estado_licencia(state: State<DbConnection>) -> Result<EstadoLicencia, Str
     Ok(EstadoLicencia { activa: true, tipo_licencia: Some(tipo_licencia), fecha_expiracion })
 }
 
+/// Activa una licencia validando la firma del código y bloqueando su reuso:
+/// cada código, sin importar su tipo, solo puede canjearse una vez en la
+/// vida (queda registrado en `codigos_activacion_usados`), evitando que un
+/// código temporal expirado se reactive infinitamente.
 #[tauri::command]
 pub fn activar_licencia(state: State<DbConnection>, codigo: String) -> Result<EstadoLicencia, String> {
     let payload = verificar_codigo(&codigo)?;
-    let conn = state.0.lock().map_err(|e| e.to_string())?;
+    let codigo_normalizado = codigo.trim().to_uppercase();
 
-    match payload.tipo {
+    let mut conn = state.0.lock().map_err(|e| e.to_string())?;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+
+    let ya_usado: bool = tx.query_row(
+        "SELECT EXISTS(SELECT 1 FROM codigos_activacion_usados WHERE codigo = ?1)",
+        [&codigo_normalizado],
+        |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+    if ya_usado {
+        return Err("Este código de activación ya fue utilizado y no puede reutilizarse.".to_string());
+    }
+
+    let resultado = match payload.tipo {
         TipoLicencia::Permanente => {
-            conn.execute(
+            tx.execute(
                 "INSERT INTO licencia_sistema (id, codigo_activacion, tipo_licencia, fecha_expiracion, estado)
                  VALUES (1, ?1, 'permanente', NULL, 'activa')
                  ON CONFLICT(id) DO UPDATE SET
@@ -84,18 +96,18 @@ pub fn activar_licencia(state: State<DbConnection>, codigo: String) -> Result<Es
                     tipo_licencia = 'permanente',
                     fecha_expiracion = NULL,
                     estado = 'activa'",
-                [&codigo],
+                [&codigo_normalizado],
             ).map_err(|e| e.to_string())?;
-            Ok(EstadoLicencia { activa: true, tipo_licencia: Some("permanente".into()), fecha_expiracion: None })
+            EstadoLicencia { activa: true, tipo_licencia: Some("permanente".into()), fecha_expiracion: None }
         }
         TipoLicencia::Temporal => {
-            let fecha_expiracion: String = conn.query_row(
+            let fecha_expiracion: String = tx.query_row(
                 "SELECT datetime('now','localtime', ?1)",
                 [format!("+{} days", payload.dias)],
                 |row| row.get(0),
             ).map_err(|e| e.to_string())?;
 
-            conn.execute(
+            tx.execute(
                 "INSERT INTO licencia_sistema (id, codigo_activacion, tipo_licencia, fecha_expiracion, estado)
                  VALUES (1, ?1, 'temporal', ?2, 'activa')
                  ON CONFLICT(id) DO UPDATE SET
@@ -103,11 +115,19 @@ pub fn activar_licencia(state: State<DbConnection>, codigo: String) -> Result<Es
                     tipo_licencia = 'temporal',
                     fecha_expiracion = excluded.fecha_expiracion,
                     estado = 'activa'",
-                (&codigo, &fecha_expiracion),
+                (&codigo_normalizado, &fecha_expiracion),
             ).map_err(|e| e.to_string())?;
-            Ok(EstadoLicencia { activa: true, tipo_licencia: Some("temporal".into()), fecha_expiracion: Some(fecha_expiracion) })
+            EstadoLicencia { activa: true, tipo_licencia: Some("temporal".into()), fecha_expiracion: Some(fecha_expiracion) }
         }
-    }
+    };
+
+    tx.execute(
+        "INSERT INTO codigos_activacion_usados (codigo) VALUES (?1)",
+        [&codigo_normalizado],
+    ).map_err(|e| e.to_string())?;
+
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(resultado)
 }
 
 // ===== REGISTRO DE USUARIO ÚNICO (se desactiva permanentemente tras el primero) =====

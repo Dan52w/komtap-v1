@@ -214,3 +214,16 @@ CREATE INDEX IF NOT EXISTS idx_abonos_proveedor ON abonos_proveedor(factura_id);
 -- Reportes contables y gastos
 CREATE INDEX IF NOT EXISTS idx_gastos_fecha ON otros_gastos(fecha);
 CREATE INDEX IF NOT EXISTS idx_licencia_estado ON licencia_sistema(estado, fecha_expiracion);
+
+-- Registro de códigos de activación ya consumidos. Evita que un mismo código
+-- (especialmente uno temporal) pueda reactivarse indefinidamente para
+-- reiniciar el periodo de vigencia.
+CREATE TABLE IF NOT EXISTS codigos_activacion_usados (
+    codigo TEXT PRIMARY KEY,
+    fecha_uso TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+
+-- Backfill: si ya existía una licencia activa de una instalación previa a este
+-- cambio, registra su código como usado para que no quede canjeable en otro lado.
+INSERT OR IGNORE INTO codigos_activacion_usados (codigo)
+SELECT codigo_activacion FROM licencia_sistema WHERE codigo_activacion IS NOT NULL;

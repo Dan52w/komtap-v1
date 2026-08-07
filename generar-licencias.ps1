@@ -44,3 +44,8 @@ for ($i = 1; $i -le $CantidadTemporales; $i++) {
 }
 
 Write-Host "Listo. Se generaron $($CantidadPermanentes + $CantidadTemporales) licencias en: $salida" -ForegroundColor Green
+
+# Desde la raíz del proyecto, si nunca has ejecutado scripts de PowerShell:
+#Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+#.\generar-licencias.ps1
