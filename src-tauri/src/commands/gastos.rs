@@ -48,9 +48,14 @@ pub fn crear_gasto(state: State<DbConnection>, gasto: NuevoGasto) -> Result<i64,
             ).map_err(|e| e.to_string())?;
         }
         None => {
+            // IMPORTANTE: se usa 'localtime' para que la fecha del gasto coincida
+            // con la fecha local del sistema (Colombia = UTC-5). Sin este modificador,
+            // date('now') devuelve la fecha en UTC, y un gasto registrado entre las
+            // 7pm y medianoche hora local quedaba guardado con la fecha del día
+            // siguiente, haciendo que no apareciera en el dashboard al filtrar "Hoy".
             conn.execute(
                 "INSERT INTO otros_gastos (descripcion, monto, fecha, categoria, metodo_pago)
-                 VALUES (?1, ?2, date('now'), ?3, ?4)",
+                 VALUES (?1, ?2, date('now','localtime'), ?3, ?4)",
                 (&gasto.descripcion, gasto.monto, &categoria, &metodo_pago),
             ).map_err(|e| e.to_string())?;
         }

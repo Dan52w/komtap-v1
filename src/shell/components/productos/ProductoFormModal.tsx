@@ -100,8 +100,9 @@ export function ProductoFormModal({ productoInicial, onGuardar, onCerrar }: Prop
             <input
               type="number"
               min={0}
-              step="0.01"
-              value={form.costo_unitario}
+              step="1"
+              placeholder="Ej. 25000"
+              value={form.costo_unitario || ""}
               onChange={(e) => setForm({ ...form, costo_unitario: Number(e.target.value) })}
               required
             />
@@ -111,8 +112,9 @@ export function ProductoFormModal({ productoInicial, onGuardar, onCerrar }: Prop
             <input
               type="number"
               min={0}
-              step="0.01"
-              value={form.precio_venta}
+              step="1"
+              placeholder="Ej. 45000"
+              value={form.precio_venta || ""}
               onChange={(e) => setForm({ ...form, precio_venta: Number(e.target.value) })}
               required
             />
@@ -125,7 +127,9 @@ export function ProductoFormModal({ productoInicial, onGuardar, onCerrar }: Prop
             <input
               type="number"
               min={0}
-              value={form.stock_actual}
+              step="1"
+              placeholder="Ej. 10"
+              value={form.stock_actual || ""}
               onChange={(e) => setForm({ ...form, stock_actual: Number(e.target.value) })}
             />
           </>
@@ -137,7 +141,9 @@ export function ProductoFormModal({ productoInicial, onGuardar, onCerrar }: Prop
             <input
               type="number"
               min={0}
-              value={form.stock_minimo}
+              step="1"
+              placeholder="Ej. 3"
+              value={form.stock_minimo || ""}
               onChange={(e) => setForm({ ...form, stock_minimo: Number(e.target.value) })}
             />
           </div>

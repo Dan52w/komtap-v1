@@ -200,18 +200,21 @@ export function FacturaModal({ proveedorId, onCerrar, onGuardar }: Props) {
             <div className="form-grid__cols-2">
               <div>
                 <label>Cantidad</label>
-                <input type="number" min="1" value={actual.cantidad} onChange={(e) => setActual({ ...actual, cantidad: Number(e.target.value) })} />
+                <input type="number" min="1" step="1" placeholder="Ej. 10" value={actual.cantidad} 
+                  onChange={(e) => setActual({ ...actual, cantidad: Number(e.target.value) })}/>
               </div>
               <div>
                 <label>Costo unitario</label>
-                <input type="number" min="0" value={actual.costo_unitario || ""} onChange={(e) => setActual({ ...actual, costo_unitario: Number(e.target.value) })} />
+                <input type="number" min="0" step="1" placeholder="Ej. 25000" value={actual.costo_unitario || ""}
+                  onChange={(e) => setActual({...actual, costo_unitario: Number(e.target.value), })}/>
               </div>
             </div>
 
             <div className="form-grid__cols-2">
               <div>
                 <label>Precio de venta</label>
-                <input type="number" min="0" value={actual.precio_venta_sugerido || ""} onChange={(e) => setActual({ ...actual, precio_venta_sugerido: Number(e.target.value) })} />
+                <input type="number" min="0" step="1" placeholder="Ej. 45000" value={actual.precio_venta_sugerido || ""}
+                  onChange={(e) => setActual({...actual, precio_venta_sugerido: Number(e.target.value), })}/>
               </div>
               {nuevo && (
                 <div>

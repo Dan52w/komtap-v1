@@ -45,7 +45,7 @@ export function GastoFormModal({ onCerrar, onGuardar }: Props) {
         <div className="form-grid__cols-2">
           <div>
             <label>Monto</label>
-            <input type="number" min="1" value={monto || ""} onChange={(e) => setMonto(Number(e.target.value))} />
+            <input type="number" min="1" step="1" placeholder="Ej. 50000" value={monto || ""} onChange={(e) => setMonto(Number(e.target.value))}            />
           </div>
           <div>
             <label>Fecha</label>

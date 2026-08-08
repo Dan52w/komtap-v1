@@ -58,7 +58,8 @@ export function AbonoForm({ saldoMaximo, valorInicial, onGuardar, onCancelar, te
         type="number"
         max={saldoMaximo}
         min="1"
-        placeholder="Monto"
+        step="1"
+        placeholder="Ej. 50000"
         value={monto || ""}
         onChange={(e) => setMonto(Number(e.target.value))}
       />

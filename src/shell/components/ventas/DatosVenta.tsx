@@ -19,9 +19,10 @@ export function DatosVenta({
 }: Props) {
   return (
     <div className="sale-details">
-      <label>
+      <label> 
         Descuento
-        <input type="number" min="0" value={descuento || ""} onChange={(e) => onCambiarDescuento(Number(e.target.value))} />
+        <input type="number" min="0" step="1" placeholder="Ej. 5000" value={descuento || ""}
+          onChange={(e) => onCambiarDescuento(Number(e.target.value))}/>
       </label>
       <label>
         Método
