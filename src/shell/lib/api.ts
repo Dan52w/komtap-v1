@@ -113,10 +113,17 @@ export const ventas = {
     }),
   crear: (venta: NuevaVenta) => invoke<number>("crear_venta", { venta }),
   listarItems: (ventaId: number) => invoke<ItemVenta[]>("listar_items_venta", { ventaId }),
+  actualizar: (ventaId: number, venta: NuevaVenta) => invoke<void>("actualizar_venta", { ventaId, venta }),
 };
 
 export const gastos = {
   listar: (mes: string) => invoke<Gasto[]>("listar_gastos", { mes, limite: 500, offset: 0 }),
   crear: (gasto: NuevoGasto) => invoke<number>("crear_gasto", { gasto }),
   eliminar: (gastoId: number) => invoke<void>("eliminar_gasto", { gastoId }),
+};
+
+export const seguridad = {
+  existeCodigoAdmin: () => invoke<boolean>("existe_codigo_admin"),
+  establecerCodigoAdmin: (codigo: string) => invoke<void>("establecer_codigo_admin", { codigo }),
+  verificarCodigoAdmin: (codigo: string) => invoke<boolean>("verificar_codigo_admin", { codigo }),
 };

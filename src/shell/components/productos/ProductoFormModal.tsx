@@ -1,6 +1,8 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Modal } from "../common/Modal";
 import type { Producto } from "../../types/productos";
+import { CATEGORIAS_PRODUCTO } from "../../lib/categorias";
+import { normalizarTexto } from "../../lib/texto";
 
 type Props = {
   productoInicial: Producto | null; // null = modo creación
@@ -26,6 +28,8 @@ export function ProductoFormModal({ productoInicial, onGuardar, onCerrar }: Prop
   const [form, setForm] = useState<Producto>(productoInicial ?? VACIO);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [categoriaOtra, setCategoriaOtra] = useState(CATEGORIAS_PRODUCTO.includes(form.categoria as any) ? "" : form.categoria);
+  const usaOtra = form.categoria === "__otra__" || (!!categoriaOtra && !CATEGORIAS_PRODUCTO.includes(form.categoria as any));
   const esEdicion = productoInicial !== null;
 
   useEffect(() => {
@@ -41,7 +45,8 @@ export function ProductoFormModal({ productoInicial, onGuardar, onCerrar }: Prop
     }
     setGuardando(true);
     try {
-      await onGuardar(form);
+      const datosFinales = { ...form, categoria: normalizarTexto(form.categoria) };
+      await onGuardar(datosFinales);
     } catch (err) {
       setError(String(err));
     } finally {
@@ -62,11 +67,29 @@ export function ProductoFormModal({ productoInicial, onGuardar, onCerrar }: Prop
         />
 
         <label>Categoría</label>
-        <input
-          value={form.categoria}
-          onChange={(e) => setForm({ ...form, categoria: e.target.value })}
-          placeholder="Pantalones"
-        />
+        <select
+          value={usaOtra ? "__otra__" : form.categoria}
+          onChange={(e) => {
+            if (e.target.value === "__otra__") {
+              setForm({ ...form, categoria: categoriaOtra || "" });
+            } else {
+              setForm({ ...form, categoria: e.target.value });
+            }
+          }}
+        >
+          {CATEGORIAS_PRODUCTO.map((c) => <option key={c}>{c}</option>)}
+          <option value="__otra__">Otra…</option>
+        </select>
+        {usaOtra && (
+          <input
+            placeholder="Escribe la categoría"
+            value={categoriaOtra}
+            onChange={(e) => {
+              setCategoriaOtra(e.target.value);
+              setForm({ ...form, categoria: e.target.value });
+            }}
+          />
+        )}
 
         <div className="form-grid__cols-2">
           <div>

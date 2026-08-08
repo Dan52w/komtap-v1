@@ -1281,6 +1281,20 @@ textarea {
   min-height: 470px;
 }
 
+.provider-info { 
+  display: flex;
+  flex-wrap: wrap; 
+  gap: 0.6rem 1.2rem; 
+  align-items: center; 
+  margin: 0.5rem 0 1.1rem; 
+  font-size: 0.85rem; 
+  color: var(--ink-soft); 
+}
+.provider-info__notas { 
+  flex-basis: 100%; 
+  margin: 0.3rem 0 0;
+}
+
 .provider-list,
 .invoices-pane {
   border: 1px solid var(--border);

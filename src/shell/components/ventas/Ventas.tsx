@@ -7,6 +7,7 @@ import { BuscadorArticulo } from "./BuscadorArticulo";
 import { CarritoItems } from "./CarritoItems";
 import { DatosVenta } from "./DatosVenta";
 import { HistorialVentas } from "./HistorialVentas";
+import { DetalleVentaModal } from "./DetallesVentaModal";
 
 const dinero = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 const PAGE_SIZE = 30;
@@ -22,6 +23,7 @@ export function Ventas() {
   const [cliente, setCliente] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [ventaSeleccionada, setVentaSeleccionada] = useState<Venta | null>(null);
   const carrito = useCarritoVenta();
 
   // Recarga completa: productos + primera página del historial (offset 0).
@@ -124,8 +126,22 @@ export function Ventas() {
           </button>
         </section>
 
-        <HistorialVentas ventas={historial} hayMas={hayMas} cargando={cargandoMas} onCargarMas={cargarMas} />
+        <HistorialVentas
+          ventas={historial}
+          hayMas={hayMas}
+          cargando={cargandoMas}
+          onCargarMas={cargarMas}
+          onVerDetalle={setVentaSeleccionada}
+        />
       </div>
+
+      {ventaSeleccionada && (
+        <DetalleVentaModal
+          venta={ventaSeleccionada}
+          onCerrar={() => setVentaSeleccionada(null)}
+          onGuardado={cargar}
+        />
+      )}
     </div>
   );
 }

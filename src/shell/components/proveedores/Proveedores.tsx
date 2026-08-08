@@ -17,6 +17,7 @@ export function Proveedores() {
   const [crearProveedor, setCrearProveedor] = useState(false);
   const [detalle, setDetalle] = useState<FacturaProveedor | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editarProveedor, setEditarProveedor] = useState(false);
 
   const cargar = async () => {
     const [a, b] = await Promise.all([api.listar(), api.resumen()]);
@@ -73,7 +74,7 @@ export function Proveedores() {
             </button>
           ))}
         </aside>
-
+          
         <section className="invoices-pane">
           <div className="invoices-pane__header">
             <div>
@@ -105,6 +106,30 @@ export function Proveedores() {
           {!f.length && <div className="empty-card">No hay facturas para este proveedor.</div>}
         </section>
       </section>
+
+      {proveedor && (
+      <div className="provider-info">
+        {proveedor.telefono && <span> {proveedor.telefono}</span>}
+        {proveedor.correo && <span> {proveedor.correo}</span>}
+        {proveedor.direccion && <span> {proveedor.direccion}</span>}
+        {proveedor.notas && <p className="provider-info__notas">{proveedor.notas}</p>}
+        <button className="btn btn--ghost" onClick={() => setEditarProveedor(true)}>
+          Editar datos
+        </button>
+      </div>
+    )}
+
+    {editarProveedor && proveedor && (
+      <ProveedorFormModal
+        proveedorInicial={proveedor}
+        onCerrar={() => setEditarProveedor(false)}
+        onGuardar={async (datos) => {
+          await api.actualizar(datos);
+          setEditarProveedor(false);
+          await cargar();
+        }}
+      />
+    )}
 
       {crear && sel && (
         <FacturaModal

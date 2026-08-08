@@ -58,6 +58,11 @@ pub fn run() {
             commands::reportes::productos_stock_critico,
             commands::reportes::desglose_gastos_mes,
             commands::reportes::dashboard_financiero_mes,
+            // Seguridad
+            commands::seguridad::existe_codigo_admin,
+            commands::seguridad::establecer_codigo_admin,
+            commands::seguridad::verificar_codigo_admin,
+            commands::ventas::actualizar_venta,
         ])
         .run(tauri::generate_context!())
         .expect("error corriendo la app");

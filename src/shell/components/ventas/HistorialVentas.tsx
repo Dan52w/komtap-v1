@@ -7,9 +7,10 @@ type Props = {
   hayMas?: boolean;
   cargando?: boolean;
   onCargarMas?: () => void;
+  onVerDetalle?: (venta: Venta) => void;
 };
 
-export function HistorialVentas({ ventas, hayMas, cargando, onCargarMas }: Props) {
+export function HistorialVentas({ ventas, hayMas, cargando, onCargarMas, onVerDetalle }: Props) {
   return (
     <section className="history-card">
       <div className="panel-title">
@@ -17,7 +18,12 @@ export function HistorialVentas({ ventas, hayMas, cargando, onCargarMas }: Props
         <p>{ventas.length} movimientos cargados</p>
       </div>
       {ventas.map((v) => (
-        <article className="history-item" key={v.id}>
+        <article
+          className="history-item"
+          key={v.id}
+          onClick={() => onVerDetalle?.(v)}
+          style={{ cursor: "pointer" }}
+        >
           <div>
             <strong>Venta #{v.id}</strong>
             <span>{v.fecha.slice(0, 16)}</span>
@@ -30,7 +36,12 @@ export function HistorialVentas({ ventas, hayMas, cargando, onCargarMas }: Props
       ))}
 
       {hayMas && (
-        <button className="btn btn--ghost" style={{ width: "100%", marginTop: "0.75rem" }} disabled={cargando} onClick={onCargarMas}>
+        <button
+          className="btn btn--ghost"
+          style={{ width: "100%", marginTop: "0.75rem" }}
+          disabled={cargando}
+          onClick={onCargarMas}
+        >
           {cargando ? "Cargando…" : "Cargar más"}
         </button>
       )}

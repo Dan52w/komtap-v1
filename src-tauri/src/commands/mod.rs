@@ -4,3 +4,4 @@ pub mod proveedores;
 pub mod ventas;
 pub mod gastos;
 pub mod reportes;
+pub mod seguridad;

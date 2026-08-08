@@ -227,3 +227,8 @@ CREATE TABLE IF NOT EXISTS codigos_activacion_usados (
 -- cambio, registra su código como usado para que no quede canjeable en otro lado.
 INSERT OR IGNORE INTO codigos_activacion_usados (codigo)
 SELECT codigo_activacion FROM licencia_sistema WHERE codigo_activacion IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS configuracion_seguridad (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    codigo_admin_hash TEXT NOT NULL
+);

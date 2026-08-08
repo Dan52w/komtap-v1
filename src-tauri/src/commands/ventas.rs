@@ -281,3 +281,67 @@ pub fn top_prendas_vendidas(state: State<DbConnection>, dias: Option<i64>, limit
 
     Ok(resultado)
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct VentaActualizada {
+    pub items: Vec<ItemVentaInput>,
+    pub descuento: Option<f64>,
+    pub metodo_pago: String,
+    pub monto_pagado: Option<f64>,
+    pub referencia_cliente: Option<String>,
+}
+
+#[tauri::command]
+pub fn actualizar_venta(state: State<DbConnection>, venta_id: i64, venta: VentaActualizada) -> Result<(), String> {
+    if venta.items.is_empty() {
+        return Err("La venta debe tener al menos un artículo".to_string());
+    }
+    validar_metodo_pago(&venta.metodo_pago)?;
+
+    let mut conn = state.0.lock().map_err(|e| e.to_string())?;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+
+    // El trigger trg_restaurar_stock_cancelacion_venta repone el stock al borrar.
+    tx.execute("DELETE FROM items_venta WHERE venta_id = ?1", [venta_id]).map_err(|e| e.to_string())?;
+
+    for item in &venta.items {
+        if item.cantidad <= 0 {
+            return Err("La cantidad de cada ítem debe ser mayor que cero".to_string());
+        }
+        let stock_actual: i64 = tx.query_row(
+            "SELECT stock_actual FROM productos WHERE id = ?1", [item.producto_id], |row| row.get(0),
+        ).map_err(|_| format!("Producto {} no encontrado", item.producto_id))?;
+        if item.cantidad > stock_actual {
+            return Err(format!("Stock insuficiente para el producto {}", item.producto_id));
+        }
+    }
+
+    let subtotal: f64 = venta.items.iter()
+        .map(|i| (i.cantidad as f64 * i.precio_unitario * 100.0).round() / 100.0)
+        .sum();
+    let descuento = venta.descuento.unwrap_or(0.0).max(0.0);
+    let total_neto = (subtotal - descuento).max(0.0);
+    let monto_pagado = venta.monto_pagado.unwrap_or(total_neto).min(total_neto).max(0.0);
+    let saldo_pendiente = total_neto - monto_pagado;
+
+    tx.execute(
+        "UPDATE ventas SET subtotal=?1, descuento=?2, total_neto=?3, monto_pagado=?4, saldo_pendiente=?5,
+                metodo_pago=?6, estado_pago=?7, referencia_cliente=?8 WHERE id=?9",
+        (subtotal, descuento, total_neto, monto_pagado, saldo_pendiente,
+         &venta.metodo_pago, estado_pago_para(saldo_pendiente, total_neto), &venta.referencia_cliente, venta_id),
+    ).map_err(|e| e.to_string())?;
+
+    for item in &venta.items {
+        let costo_unitario: f64 = tx.query_row(
+            "SELECT costo_unitario FROM productos WHERE id = ?1", [item.producto_id], |row| row.get(0),
+        ).map_err(|e| e.to_string())?;
+        let item_subtotal = (item.cantidad as f64 * item.precio_unitario * 100.0).round() / 100.0;
+        tx.execute(
+            "INSERT INTO items_venta (venta_id, producto_id, cantidad, precio_unitario, costo_unitario, subtotal)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            (venta_id, item.producto_id, item.cantidad, item.precio_unitario, costo_unitario, item_subtotal),
+        ).map_err(|e| e.to_string())?;
+    }
+
+    tx.commit().map_err(|e| e.to_string())
+}
