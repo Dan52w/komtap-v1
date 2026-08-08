@@ -4,6 +4,7 @@ import { proveedores as api } from "../../lib/api";
 import type { FacturaProveedor, Proveedor, ResumenProveedor } from "../../types/proveedores";
 import { FacturaModal } from "./FacturaModal";
 import { DetalleFacturaModal } from "./DetalleFacturaModal";
+import { ProveedorFormModal } from "./Proveedorformmodal ";
 
 const dinero = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 
@@ -13,6 +14,7 @@ export function Proveedores() {
   const [sel, setSel] = useState<number | null>(null);
   const [f, setF] = useState<FacturaProveedor[]>([]);
   const [crear, setCrear] = useState(false);
+  const [crearProveedor, setCrearProveedor] = useState(false);
   const [detalle, setDetalle] = useState<FacturaProveedor | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,9 +44,18 @@ export function Proveedores() {
           <h1>Proveedores</h1>
           <p>Productos, facturas y pagos organizados por proveedor.</p>
         </div>
-        <button className="btn btn--primary" disabled={!sel} onClick={() => setCrear(true)}>
-          + Agregar factura
-        </button>
+        <div className="header-actions">
+          <button className="btn btn--ghost" onClick={() => setCrearProveedor(true)}>
+            + Nuevo proveedor
+          </button>
+          <button
+            className="btn btn--primary"
+            disabled={!sel}
+            onClick={() => setCrear(true)}
+          >
+            + Agregar factura
+          </button>
+        </div>
       </div>
 
       {error && <p className="form-error">{error}</p>}
@@ -115,6 +126,18 @@ export function Proveedores() {
           onCambio={async () => {
             await cargar();
             setF(await api.listarFacturas(detalle.proveedor_id));
+          }}
+        />
+      )}
+      {crearProveedor && (
+        <ProveedorFormModal
+          proveedorInicial={null}
+          onCerrar={() => setCrearProveedor(false)}
+          onGuardar={async (nuevo) => {
+            const id = await api.crear(nuevo);
+            setCrearProveedor(false);
+            await cargar();
+            setSel(id);
           }}
         />
       )}
