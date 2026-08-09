@@ -8,6 +8,8 @@ export function RegistrarUsuario() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmar, setConfirmar] = useState("");
+  const [codigoAdmin, setCodigoAdmin] = useState("");
+  const [confirmarCodigoAdmin, setConfirmarCodigoAdmin] = useState("");
   const [nombreCompleto, setNombreCompleto] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
@@ -20,6 +22,14 @@ export function RegistrarUsuario() {
       setError("Las contraseñas no coinciden");
       return;
     }
+    if (codigoAdmin.trim().length < 4) {
+      setError("El código de seguridad debe tener al menos 4 caracteres");
+      return;
+    }
+    if (codigoAdmin !== confirmarCodigoAdmin) {
+      setError("Los códigos de seguridad no coinciden");
+      return;
+    }
 
     setCargando(true);
     try {
@@ -27,6 +37,7 @@ export function RegistrarUsuario() {
         codigoMaestro: codigoMaestro.trim(),
         username: username.trim(),
         password,
+        codigoAdmin: codigoAdmin.trim(),
         nombreCompleto: nombreCompleto.trim() || undefined,
       });
       onUsuarioRegistrado(usuario);
@@ -80,6 +91,28 @@ export function RegistrarUsuario() {
           type="password"
           value={confirmar}
           onChange={(e) => setConfirmar(e.target.value)}
+          required
+        />
+
+        <label htmlFor="codigoAdmin">Código para editar o eliminar ventas</label>
+        <input
+          id="codigoAdmin"
+          type="password"
+          inputMode="numeric"
+          minLength={4}
+          value={codigoAdmin}
+          onChange={(e) => setCodigoAdmin(e.target.value)}
+          required
+        />
+
+        <label htmlFor="confirmarCodigoAdmin">Confirmar código de seguridad</label>
+        <input
+          id="confirmarCodigoAdmin"
+          type="password"
+          inputMode="numeric"
+          minLength={4}
+          value={confirmarCodigoAdmin}
+          onChange={(e) => setConfirmarCodigoAdmin(e.target.value)}
           required
         />
 

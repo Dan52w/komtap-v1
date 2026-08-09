@@ -1,4 +1,5 @@
 import type { EstadoStockFiltro, FiltroProductos } from "../../types/productos";
+import { CATEGORIAS_PRODUCTO } from "../../lib/categorias";
 
 type Props = {
   filtro: FiltroProductos;
@@ -45,12 +46,16 @@ export function FiltrosProductos({ filtro, onCambiar }: Props) {
           value={filtro.nombre ?? ""}
           onChange={(e) => onCambiar({ ...filtro, nombre: e.target.value || null })}
         />
-        <input
+        <select
           className="filtros-panel__input"
-          placeholder="Categoría"
           value={filtro.categoria ?? ""}
           onChange={(e) => onCambiar({ ...filtro, categoria: e.target.value || null })}
-        />
+        >
+          <option value="">Todas las categorías</option>
+          {CATEGORIAS_PRODUCTO.map((categoria) => (
+            <option key={categoria} value={categoria}>{categoria}</option>
+          ))}
+        </select>
         <input
           className="filtros-panel__input"
           placeholder="Talla"

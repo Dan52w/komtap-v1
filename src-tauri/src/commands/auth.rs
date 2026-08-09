@@ -146,6 +146,7 @@ pub fn registrar_usuario(
     codigo_maestro: String,
     username: String,
     password: String,
+    codigo_admin: String,
     nombre_completo: Option<String>,
 ) -> Result<Usuario, String> {
     let conn = state.0.lock().map_err(|e| e.to_string())?;
@@ -165,14 +166,25 @@ pub fn registrar_usuario(
     }
 
     let password_hash = hash(&password, DEFAULT_COST).map_err(|e| e.to_string())?;
+    if codigo_admin.trim().len() < 4 {
+        return Err("El código de seguridad debe tener al menos 4 caracteres".to_string());
+    }
+    let codigo_admin_hash = hash(codigo_admin.trim(), DEFAULT_COST).map_err(|e| e.to_string())?;
 
-    conn.execute(
+    let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
+    tx.execute(
         "INSERT INTO usuarios (username, password_hash, nombre_completo) VALUES (?1, ?2, ?3)",
         (&username, &password_hash, &nombre_completo),
     ).map_err(|e| e.to_string())?;
+    let usuario_id = tx.last_insert_rowid();
+    tx.execute(
+        "INSERT INTO configuracion_seguridad (id, codigo_admin_hash) VALUES (1, ?1)",
+        [&codigo_admin_hash],
+    ).map_err(|e| e.to_string())?;
+    tx.commit().map_err(|e| e.to_string())?;
 
     Ok(Usuario {
-        id: conn.last_insert_rowid(),
+        id: usuario_id,
         username,
     })
 }

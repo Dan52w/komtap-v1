@@ -4,20 +4,20 @@
 
 :root {
   /* Paleta de colores base */
-  --bg: #e9e7e2;
-  --surface: #f7f6f2;
-  --border: #ddd9d0;
-  --border-strong: #cbc4b8;
+  --bg: #f3f0e9;
+  --surface: #fffdfa;
+  --border: #e3ddd2;
+  --border-strong: #d3cabd;
 
   /* Colores de texto */
-  --ink: #21252c;
-  --ink-soft: #5a6070;
-  --ink-faint: #8b8f9a;
+  --ink: #183f4d;
+  --ink-soft: #64747a;
+  --ink-faint: #8a9697;
 
   /* Colores primarios */
-  --primary: #245b69;
-  --primary-deep: #13313e;
-  --primary-soft: #d8e8e7;
+  --primary: #276473;
+  --primary-deep: #1c4e5c;
+  --primary-soft: #e2efed;
 
   /* Estados y retroalimentación */
   --positive: #3f7d58;
@@ -28,9 +28,10 @@
   --warning-soft: #f6e9d6;
 
   /* UI y Tipografía */
-  --radius: 10px;
-  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --radius: 12px;
+  --font-display: Georgia, Cambria, "Times New Roman", serif;
   --font-body: "Inter", system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-numeric: "Aptos Display", "Segoe UI Variable", "Segoe UI", Arial, sans-serif;
 
   font-family: var(--font-body);
   color-scheme: light;
@@ -48,6 +49,7 @@
 body {
   margin: 0;
   background: var(--bg);
+  min-width: 320px;
 }
 
 h1,
@@ -87,11 +89,28 @@ textarea {
 
 .app-header {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.75rem;
-  background: rgba(247, 246, 242, 0.92);
+  padding: 1.05rem 2.25rem;
+  background: rgba(255, 253, 250, 0.92);
   border-bottom: 1px solid var(--border);
+}
+
+.app-header__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.app-header__identity strong {
+  font-family: var(--font-display);
+  font-size: 1.18rem;
+  color: var(--primary-deep);
+}
+
+.app-header__identity span {
+  color: var(--ink-soft);
+  font-size: 0.72rem;
 }
 
 .app-header__usuario {
@@ -129,9 +148,10 @@ textarea {
    ========================================================================== */
 
 .app-sidebar {
-  background: linear-gradient(165deg, #153d4a 0%, #102a34 56%, #182a31 100%);
-  color: #eef2f6;
-  padding: 1.5rem 1.25rem;
+  background: #fffdfa;
+  color: var(--ink);
+  padding: 2rem 1.35rem 1.25rem;
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
 }
@@ -146,8 +166,9 @@ textarea {
   width: 34px;
   height: 34px;
   border-radius: 8px;
-  background: #d9a441;
-  color: white;
+  background: var(--primary-soft);
+  color: var(--primary-deep);
+  border: 2px solid var(--primary);
   font-family: var(--font-display);
   font-weight: 700;
   display: flex;
@@ -159,13 +180,14 @@ textarea {
 .app-sidebar__name {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 1.45rem;
+  color: var(--primary-deep);
   letter-spacing: -0.01em;
 }
 
 .app-sidebar__seam {
   height: 0;
-  border-top: 1px dashed rgba(255, 255, 255, 0.25);
+  border-top: 1px solid var(--border);
   margin: 1.5rem 0;
 }
 
@@ -186,26 +208,26 @@ textarea {
   width: 100%;
   text-align: left;
   background: transparent;
-  color: rgba(238, 242, 246, 0.75);
+  color: var(--ink-soft);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
 .app-sidebar__link:hover:not(.proximamente) {
-  background: rgba(255, 255, 255, 0.08);
-  color: #eef2f6;
+  background: var(--primary-soft);
+  color: var(--primary-deep);
 }
 
 .app-sidebar__link.activo {
-  background: rgba(217, 164, 65, 0.18);
-  box-shadow: inset 3px 0 #d9a441;
+  background: var(--primary);
+  box-shadow: 0 8px 16px rgba(39, 100, 115, 0.18);
   color: white;
   font-weight: 500;
 }
 
 .app-sidebar__link.proximamente {
   cursor: default;
-  color: rgba(238, 242, 246, 0.4);
+  color: var(--ink-faint);
 }
 
 .app-sidebar__icon {
@@ -339,7 +361,7 @@ textarea {
   align-items: flex-end;
   gap: 1rem;
   padding-bottom: 1.25rem;
-  border-bottom: 1px dashed var(--border-strong);
+  border-bottom: 1px solid var(--border);
 }
 
 .module-header h1 {
@@ -391,6 +413,18 @@ textarea {
 
 .btn--primary:hover {
   background: var(--primary-deep);
+}
+
+.btn--danger {
+  background: var(--negative-soft);
+  border-color: #efc9c5;
+  color: var(--negative);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: var(--negative);
+  border-color: var(--negative);
+  color: white;
 }
 
 .btn--ghost {
@@ -517,7 +551,9 @@ textarea {
 }
 
 .amount {
+  font-family: var(--font-numeric);
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
   text-align: right;
 }
 
@@ -612,6 +648,16 @@ textarea {
   padding:1.25rem; border-radius:14px;
   background:var(--surface); 
   box-shadow:0 20px 60px rgba(0,0,0,.2); 
+}
+
+.modal:has(.sale-receipt) {
+  width: min(980px, 100%);
+  padding: 0;
+  overflow: hidden;
+}
+
+.modal:has(.sale-receipt) > .modal__header {
+  display: none;
 }
 
 .modal h4 {
@@ -1146,6 +1192,129 @@ textarea {
   margin-top: 1rem;
 }
 
+/* Comprobante de venta: vista previa para impresión y guardado en PDF. */
+.sale-receipt {
+  padding: 2rem 2.15rem 1.15rem;
+  background: #fffdfa;
+}
+
+.sale-receipt__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1.2rem;
+  border-bottom: 3px solid var(--primary);
+}
+
+.sale-receipt__header h2 {
+  color: var(--primary-deep);
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.sale-receipt__header p:not(.eyebrow) {
+  margin: 0.35rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+}
+
+.sale-receipt__number {
+  min-width: 118px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+
+.sale-receipt__number strong {
+  font-family: var(--font-display);
+  color: var(--primary-deep);
+  font-size: 1.65rem;
+}
+
+.sale-receipt__number em {
+  border-radius: 999px;
+  padding: 0.22rem 0.55rem;
+  font-style: normal;
+  font-weight: 700;
+  color: var(--primary-deep);
+  background: var(--primary-soft);
+}
+
+.sale-receipt__customer {
+  margin: 1.25rem 0;
+  color: var(--ink-soft);
+}
+
+.sale-receipt__customer strong { color: var(--ink); }
+
+.sale-receipt__table { border-radius: 9px; }
+
+.sale-receipt__table .tabla-base th {
+  background: #eef4f2;
+  color: #5a6b6e;
+}
+
+.sale-receipt__table .tabla-base td { padding: 0.8rem 0.9rem; }
+
+.sale-receipt__table input {
+  width: 86px;
+  padding: 0.42rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: white;
+}
+
+.sale-receipt__edit-fields { margin-top: 1rem; }
+
+.sale-receipt__totals {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2rem;
+  padding: 1.25rem 0 0.2rem;
+}
+
+.sale-receipt__totals > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.sale-receipt__totals span {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+
+.sale-receipt__totals strong {
+  font-family: var(--font-display);
+  font-size: 1.16rem;
+}
+
+.sale-receipt__grand-total strong { color: var(--primary-deep); font-size: 1.55rem; }
+
+.security-code-panel {
+  margin: 0 2.15rem;
+  padding: 1rem;
+  border: 1px solid #d7e6e2;
+  border-radius: 10px;
+  background: #eff6f4;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.security-code-panel label { color: var(--ink-soft); font-size: 0.8rem; }
+.security-code-panel input { max-width: 260px; padding: 0.6rem; border: 1px solid var(--border-strong); border-radius: 8px; }
+
+.sale-receipt__actions {
+  margin: 1.25rem 2.15rem 1.6rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--border);
+}
+
 .panel-title p {
   margin: -0.75rem 0 1rem;
   color: var(--ink-soft);
@@ -1232,6 +1401,7 @@ textarea {
   margin-top: 0.5rem;
   font-family: var(--font-display);
   font-size: 1.28rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .report-kpi--positive {
@@ -1374,6 +1544,8 @@ textarea {
   text-align: right;
   color: var(--negative);
   font-size: 1.15rem;
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
 }
 
 .provider-debt small {
@@ -1404,6 +1576,48 @@ textarea {
 .invoice-card strong {
   margin: 0.45rem 0 0.15rem;
 }
+
+.invoice-card b,
+.report-row b,
+.sale-total strong,
+.sale-receipt__totals strong {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.invoices-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.6rem;
+  padding: 0.8rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #f8f7f3;
+}
+
+.invoices-filters > input { flex: 1 1 210px; }
+
+.invoices-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--ink-soft);
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+.invoices-filters input {
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.invoices-filters .btn { padding: 0.55rem 0.7rem; }
 
 .invoice-card small {
   color: var(--ink-soft);
@@ -1611,6 +1825,25 @@ textarea {
 
   .tabla-base {
     min-width: 650px;
+  }
+
+  .sale-receipt {
+    padding: 1.35rem;
+  }
+
+  .sale-receipt__header h2 {
+    font-size: 1.55rem;
+  }
+
+  .sale-receipt__totals {
+    gap: 0.9rem;
+    justify-content: space-between;
+  }
+
+  .sale-receipt__actions,
+  .security-code-panel {
+    margin-left: 1.35rem;
+    margin-right: 1.35rem;
   }
 }
 

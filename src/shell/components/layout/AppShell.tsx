@@ -18,6 +18,10 @@ export function AppShell() {
       <Sidebar moduloActivo={moduloActivo} onNavegar={setModuloActivo} />
       <div className="app-main">
         <header className="app-header">
+          <div className="app-header__identity">
+            <strong>Komtap</strong>
+            <span>Gestión comercial</span>
+          </div>
           <div className="app-header__usuario">
             <span>{usuario?.username}</span>
             <button onClick={cerrarSesion}>Cerrar sesión</button>

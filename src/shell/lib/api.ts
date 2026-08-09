@@ -32,12 +32,14 @@ export const auth = {
     codigoMaestro: string;
     username: string;
     password: string;
+    codigoAdmin: string;
     nombreCompleto?: string;
   }) =>
     invoke<Usuario>("registrar_usuario", {
       codigoMaestro: params.codigoMaestro,
       username: params.username,
       password: params.password,
+      codigoAdmin: params.codigoAdmin,
       nombreCompleto: params.nombreCompleto ?? null,
     }),
 
@@ -114,6 +116,7 @@ export const ventas = {
   crear: (venta: NuevaVenta) => invoke<number>("crear_venta", { venta }),
   listarItems: (ventaId: number) => invoke<ItemVenta[]>("listar_items_venta", { ventaId }),
   actualizar: (ventaId: number, venta: NuevaVenta) => invoke<void>("actualizar_venta", { ventaId, venta }),
+  eliminar: (ventaId: number) => invoke<void>("eliminar_venta", { ventaId }),
 };
 
 export const gastos = {

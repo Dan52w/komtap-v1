@@ -15,17 +15,24 @@ export function Reportes() {
 
   const imprimir = () => {
     if (!financiero) return;
+    const totalGastos = gastos.reduce((total, gasto) => total + gasto.monto, 0);
+    const filasGastos = gastos.map((gasto) => `
+      <tr><td>${escapar(gasto.fecha)}</td><td>${escapar(gasto.categoria)}</td><td>${escapar(gasto.descripcion)}</td><td class="right">${dinero.format(gasto.monto)}</td></tr>`).join("");
+    const filasFacturas = facturasPendientes.map((x) => `
+      <tr><td>${escapar(x.numero_factura || x.id)}</td><td>${escapar(x.proveedor)}</td><td class="right">${dinero.format(x.monto_total)}</td><td class="right">${dinero.format(x.monto_total - x.saldo_pendiente)}</td><td>${escapar(x.fecha_emision)}</td></tr>`).join("");
     imprimirDocumento(
-      "Reporte mensual",
+      `Reporte mensual · ${mes}`,
       `<div class="summary">
         <div><span>Dinero ingresado</span><strong>${dinero.format(financiero.dinero_ingresado)}</strong></div>
         <div><span>Ganancia neta real</span><strong>${dinero.format(financiero.ganancia_neta_real)}</strong></div>
         <div><span>Deuda con proveedores</span><strong>${dinero.format(deudaProveedores)}</strong></div>
       </div>
+      <h2>Gastos del mes</h2>
+      <table><thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th class="right">Monto</th></tr></thead>
+      <tbody>${filasGastos || '<tr><td colspan="4">Sin gastos registrados este mes.</td></tr>'}</tbody>
+      <tfoot><tr><td colspan="3" class="right"><strong>Total gastos operativos</strong></td><td class="right"><strong>${dinero.format(totalGastos)}</strong></td></tr></tfoot></table>
       <h2>Facturas de proveedores</h2>
-      <table>${facturasPendientes
-        .map((x) => `<tr><td>${escapar(x.numero_factura || x.id)}</td><td>${escapar(x.proveedor)}</td><td>${dinero.format(x.monto_total)}</td><td>${dinero.format(x.monto_total - x.saldo_pendiente)}</td><td>${escapar(x.fecha_emision)}</td></tr>`)
-        .join("")}</table>`
+      <table><thead><tr><th>Factura</th><th>Proveedor</th><th class="right">Total</th><th class="right">Abonado</th><th>Emisión</th></tr></thead><tbody>${filasFacturas || '<tr><td colspan="5">Sin facturas pendientes.</td></tr>'}</tbody></table>`
     );
   };
 

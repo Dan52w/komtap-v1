@@ -1,5 +1,5 @@
 // src/shell/components/proveedores/Proveedores.tsx (orquestador)
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { proveedores as api } from "../../lib/api";
 import type { FacturaProveedor, Proveedor, ResumenProveedor } from "../../types/proveedores";
 import { FacturaModal } from "./FacturaModal";
@@ -18,6 +18,9 @@ export function Proveedores() {
   const [detalle, setDetalle] = useState<FacturaProveedor | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editarProveedor, setEditarProveedor] = useState(false);
+  const [buscarFactura, setBuscarFactura] = useState("");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
 
   const cargar = async () => {
     const [a, b] = await Promise.all([api.listar(), api.resumen()]);
@@ -36,6 +39,17 @@ export function Proveedores() {
 
   const deuda = (id: number | null) => r.find((x) => x.proveedor_id === id)?.deuda_total ?? 0;
   const proveedor = p.find((x) => x.id === sel);
+  const facturasFiltradas = useMemo(() => {
+    const termino = buscarFactura.trim().toLowerCase();
+    return f.filter((factura) => {
+      const coincideBusqueda = !termino || [factura.numero_factura, `factura ${factura.id}`, proveedor?.nombre]
+        .filter(Boolean)
+        .some((valor) => String(valor).toLowerCase().includes(termino));
+      const desdeValida = !fechaDesde || factura.fecha_emision >= fechaDesde;
+      const hastaValida = !fechaHasta || factura.fecha_emision <= fechaHasta;
+      return coincideBusqueda && desdeValida && hastaValida;
+    });
+  }, [buscarFactura, f, fechaDesde, fechaHasta, proveedor?.nombre]);
 
   return (
     <div className="module-page providers-page">
@@ -87,8 +101,21 @@ export function Proveedores() {
             </strong>
           </div>
 
+          <div className="invoices-filters">
+            <input
+              type="search"
+              value={buscarFactura}
+              onChange={(e) => setBuscarFactura(e.target.value)}
+              placeholder="Buscar por número de factura"
+              aria-label="Buscar factura"
+            />
+            <label>Desde <input type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} /></label>
+            <label>Hasta <input type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} /></label>
+            {(buscarFactura || fechaDesde || fechaHasta) && <button className="btn btn--ghost" type="button" onClick={() => { setBuscarFactura(""); setFechaDesde(""); setFechaHasta(""); }}>Limpiar</button>}
+          </div>
+
           <div className="invoice-grid">
-            {f.map((x) => (
+            {facturasFiltradas.map((x) => (
               <article className="invoice-card" key={x.id}>
                 <div>
                   <span className={`status status--${x.estado_pago.toLowerCase()}`}>{x.estado_pago}</span>
@@ -104,6 +131,7 @@ export function Proveedores() {
           </div>
 
           {!f.length && <div className="empty-card">No hay facturas para este proveedor.</div>}
+          {!!f.length && !facturasFiltradas.length && <div className="empty-card">No encontramos facturas con esos filtros.</div>}
         </section>
       </section>
 

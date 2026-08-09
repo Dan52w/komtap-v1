@@ -345,3 +345,14 @@ pub fn actualizar_venta(state: State<DbConnection>, venta_id: i64, venta: VentaA
 
     tx.commit().map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub fn eliminar_venta(state: State<DbConnection>, venta_id: i64) -> Result<(), String> {
+    let mut conn = state.0.lock().map_err(|e| e.to_string())?;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    let eliminadas = tx.execute("DELETE FROM ventas WHERE id = ?1", [venta_id]).map_err(|e| e.to_string())?;
+    if eliminadas == 0 {
+        return Err("Venta no encontrada".to_string());
+    }
+    tx.commit().map_err(|e| e.to_string())
+}
