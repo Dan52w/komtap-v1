@@ -1,7 +1,10 @@
 mod db;
+mod errors;
 mod models;
 mod commands;
-pub mod licencia; 
+mod repos;
+mod services;
+pub mod licencia;
 
 use db::{init_db, DbConnection};
 use std::sync::Mutex;
@@ -37,6 +40,7 @@ pub fn run() {
             commands::proveedores::eliminar_proveedor,
             commands::proveedores::crear_factura_proveedor,
             commands::proveedores::listar_facturas_proveedor,
+            commands::proveedores::listar_facturas_pendientes,
             commands::proveedores::listar_abonos_factura_proveedor,
             commands::proveedores::listar_items_factura_proveedor,
             commands::proveedores::registrar_abono_proveedor,
@@ -46,12 +50,24 @@ pub fn run() {
             commands::ventas::crear_venta,
             commands::ventas::listar_ventas,
             commands::ventas::listar_items_venta,
+            commands::ventas::actualizar_venta,
+            commands::ventas::eliminar_venta,
             commands::ventas::registrar_abono_venta,
+            commands::ventas::listar_abonos_venta,
             commands::ventas::top_prendas_vendidas,
             // Gastos operativos
             commands::gastos::crear_gasto,
             commands::gastos::listar_gastos,
+            commands::gastos::actualizar_gasto,
             commands::gastos::eliminar_gasto,
+            // Clientes
+            commands::clientes::crear_cliente,
+            commands::clientes::listar_clientes,
+            commands::clientes::actualizar_cliente,
+            commands::clientes::eliminar_cliente,
+            // Respaldo
+            commands::respaldo::exportar_respaldo,
+            commands::respaldo::importar_respaldo,
             // Contabilidad y reportes
             commands::reportes::dashboard_financiero,
             commands::reportes::ventas_por_metodo_pago,
@@ -62,8 +78,6 @@ pub fn run() {
             commands::seguridad::existe_codigo_admin,
             commands::seguridad::establecer_codigo_admin,
             commands::seguridad::verificar_codigo_admin,
-            commands::ventas::actualizar_venta,
-            commands::ventas::eliminar_venta,
         ])
         .run(tauri::generate_context!())
         .expect("error corriendo la app");
