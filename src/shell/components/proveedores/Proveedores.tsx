@@ -4,9 +4,8 @@ import { proveedores as api } from "../../lib/api";
 import type { FacturaProveedor, Proveedor, ResumenProveedor } from "../../types/proveedores";
 import { FacturaModal } from "./FacturaModal";
 import { DetalleFacturaModal } from "./DetalleFacturaModal";
-import { ProveedorFormModal } from "./Proveedorformmodal ";
-
-const dinero = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+import { ProveedorFormModal } from "./ProveedorFormModal";
+import { dinero } from "../../lib/format";
 
 export function Proveedores() {
   const [p, setP] = useState<Proveedor[]>([]);
@@ -84,7 +83,7 @@ export function Proveedores() {
           {p.map((x) => (
             <button className={`provider-item ${x.id === sel ? "active" : ""}`} key={x.id} onClick={() => setSel(x.id)}>
               <span>{x.nombre}</span>
-              <small>{deuda(x.id) ? `Debe ${dinero.format(deuda(x.id))}` : "Sin saldo pendiente"}</small>
+              <small>{deuda(x.id) ? `Debe ${dinero(deuda(x.id))}` : "Sin saldo pendiente"}</small>
             </button>
           ))}
         </aside>
@@ -96,7 +95,7 @@ export function Proveedores() {
               <h2>Facturas</h2>
             </div>
             <strong className="provider-debt">
-              {dinero.format(deuda(sel))}
+              {dinero(deuda(sel))}
               <small>pendiente total</small>
             </strong>
           </div>
@@ -123,7 +122,7 @@ export function Proveedores() {
                   <small>Emitida: {x.fecha_emision}</small>
                 </div>
                 <div className="invoice-card__footer">
-                  <span>Saldo <b>{dinero.format(x.saldo_pendiente)}</b></span>
+                  <span>Saldo <b>{dinero(x.saldo_pendiente)}</b></span>
                   <button className="btn btn--ghost" onClick={() => setDetalle(x)}>Detalles</button>
                 </div>
               </article>

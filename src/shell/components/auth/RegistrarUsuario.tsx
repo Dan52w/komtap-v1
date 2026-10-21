@@ -4,7 +4,6 @@ import { useAuth } from "../../context/AuthContext";
 
 export function RegistrarUsuario() {
   const { onUsuarioRegistrado } = useAuth();
-  const [codigoMaestro, setCodigoMaestro] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmar, setConfirmar] = useState("");
@@ -34,7 +33,6 @@ export function RegistrarUsuario() {
     setCargando(true);
     try {
       const usuario = await auth.registrarUsuario({
-        codigoMaestro: codigoMaestro.trim(),
         username: username.trim(),
         password,
         codigoAdmin: codigoAdmin.trim(),
@@ -53,14 +51,6 @@ export function RegistrarUsuario() {
       <h2>Crear usuario administrador</h2>
       <p>Este registro solo puede hacerse una vez.</p>
       <form onSubmit={handleSubmit}>
-        <label htmlFor="codigoMaestro">Código maestro de registro</label>
-        <input
-          id="codigoMaestro"
-          value={codigoMaestro}
-          onChange={(e) => setCodigoMaestro(e.target.value)}
-          required
-        />
-
         <label htmlFor="nombreCompleto">Nombre completo (opcional)</label>
         <input
           id="nombreCompleto"

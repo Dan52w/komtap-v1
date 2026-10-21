@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { gastos as api } from "../shell/lib/api";
-import type { Gasto, NuevoGasto } from "../shell/types/gastos";
+import type { Gasto, NuevoGasto, GastoActualizado } from "../shell/types/gastos";
 
 export function useGastos(mes: string) {
   const [lista, setLista] = useState<Gasto[]>([]);
@@ -28,10 +28,15 @@ export function useGastos(mes: string) {
     await cargar();
   };
 
+  const actualizar = async (id: number, gasto: GastoActualizado) => {
+    await api.actualizar(id, gasto);
+    await cargar();
+  };
+
   const eliminar = async (id: number) => {
     await api.eliminar(id);
     await cargar();
   };
 
-  return { lista, cargando, error, crear, eliminar, recargar: cargar };
+  return { lista, cargando, error, crear, actualizar, eliminar, recargar: cargar };
 }

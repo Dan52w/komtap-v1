@@ -7,10 +7,11 @@ import type {
   Periodo,
 } from "../types/reportes";
 import type { Producto, FiltroProductos } from "../types/productos";
-import type { TopPrenda } from "../types/ventas";
-import type { Proveedor, ResumenProveedor, FacturaProveedor, AbonoProveedor, DetalleFactura, NuevaFacturaInput, AbonoInput } from "../types/proveedores";
-import type { Gasto, NuevoGasto } from "../types/gastos";
+import type { TopPrenda, AbonoVenta, AbonoVentaInput } from "../types/ventas";
+import type { Proveedor, ResumenProveedor, FacturaProveedor, FacturaPendiente, AbonoProveedor, DetalleFactura, NuevaFacturaInput, AbonoInput } from "../types/proveedores";
+import type { Gasto, NuevoGasto, GastoActualizado } from "../types/gastos";
 import type { Venta, NuevaVenta, ItemVenta } from "../types/ventas";
+import type { Cliente } from "../types/clientes";
 
 /**
  * Wrapper delgado sobre `invoke`. Cada comando Rust falla con un `String`
@@ -29,14 +30,12 @@ export const auth = {
   existeUsuarioRegistrado: () => invoke<boolean>("existe_usuario_registrado"),
 
   registrarUsuario: (params: {
-    codigoMaestro: string;
     username: string;
     password: string;
     codigoAdmin: string;
     nombreCompleto?: string;
   }) =>
     invoke<Usuario>("registrar_usuario", {
-      codigoMaestro: params.codigoMaestro,
       username: params.username,
       password: params.password,
       codigoAdmin: params.codigoAdmin,
@@ -66,6 +65,7 @@ export const proveedores = {
   eliminar: (proveedorId: number) => invoke<void>("eliminar_proveedor", { proveedorId }),
   resumen: () => invoke<ResumenProveedor[]>("resumen_por_proveedor"),
   listarFacturas: (proveedorId: number) => invoke<FacturaProveedor[]>("listar_facturas_proveedor", { proveedorId }),
+  listarFacturasPendientes: () => invoke<FacturaPendiente[]>("listar_facturas_pendientes"),
   // antes mandaba abono_inicial: null siempre — ahora sí se envía lo que capture el modal
   crearFactura: (factura: NuevaFacturaInput) =>
     invoke<number>("crear_factura_proveedor", {
@@ -117,12 +117,29 @@ export const ventas = {
   listarItems: (ventaId: number) => invoke<ItemVenta[]>("listar_items_venta", { ventaId }),
   actualizar: (ventaId: number, venta: NuevaVenta) => invoke<void>("actualizar_venta", { ventaId, venta }),
   eliminar: (ventaId: number) => invoke<void>("eliminar_venta", { ventaId }),
+  registrarAbono: (ventaId: number, abono: AbonoVentaInput) =>
+    invoke<number>("registrar_abono_venta", { ventaId, abono }),
+  listarAbonos: (ventaId: number) => invoke<AbonoVenta[]>("listar_abonos_venta", { ventaId }),
 };
 
 export const gastos = {
   listar: (mes: string) => invoke<Gasto[]>("listar_gastos", { mes, limite: 500, offset: 0 }),
   crear: (gasto: NuevoGasto) => invoke<number>("crear_gasto", { gasto }),
+  actualizar: (gastoId: number, gasto: GastoActualizado) =>
+    invoke<void>("actualizar_gasto", { gastoId, gasto }),
   eliminar: (gastoId: number) => invoke<void>("eliminar_gasto", { gastoId }),
+};
+
+export const clientes = {
+  listar: () => invoke<Cliente[]>("listar_clientes"),
+  crear: (cliente: Cliente) => invoke<number>("crear_cliente", { cliente }),
+  actualizar: (cliente: Cliente) => invoke<void>("actualizar_cliente", { cliente }),
+  eliminar: (clienteId: number) => invoke<void>("eliminar_cliente", { clienteId }),
+};
+
+export const respaldo = {
+  exportar: (ruta: string) => invoke<void>("exportar_respaldo", { ruta }),
+  importar: (ruta: string) => invoke<void>("importar_respaldo", { ruta }),
 };
 
 export const seguridad = {

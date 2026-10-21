@@ -74,3 +74,15 @@ export type NuevaFacturaInput = {
   items: ItemFactura[];
   abono_inicial?: AbonoInput | null;
 };
+
+export type FacturaPendiente = {
+  id: number;
+  proveedor_id: number;
+  proveedor_nombre: string;
+  numero_factura: string | null;
+  fecha_emision: string;
+  fecha_limite_pago: string | null;
+  monto_total: number;
+  saldo_pendiente: number;
+  estado_pago: string;
+};
