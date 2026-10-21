@@ -1,210 +1,56 @@
+//! Comandos de licencia y autenticación.
+//!
+//! Adaptadores delgados: abren la conexión (y la transacción cuando la
+//! operación escribe en varias tablas) y delegan toda la lógica a
+//! `crate::services`.
+
 use crate::db::DbConnection;
-use bcrypt::{hash, verify, DEFAULT_COST};
-use serde::{Deserialize, Serialize};
+use crate::models::{EstadoLicencia, Usuario};
+use crate::services::{licencia, usuarios};
 use tauri::State;
-use crate::licencia::{verificar_codigo, TipoLicencia};
-
-/// Código maestro requerido para registrar el usuario administrador único.
-/// No está relacionado con el licenciamiento (eso se maneja en `licencia.rs`).
-const CODIGO_MAESTRO_REGISTRO: &str = "KOMTAP-MASTER-0000-Z9Y8";
-
-#[derive(Serialize, Deserialize)]
-pub struct Usuario {
-    pub id: i64,
-    pub username: String,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct EstadoLicencia {
-    pub activa: bool,
-    pub tipo_licencia: Option<String>,
-    pub fecha_expiracion: Option<String>,
-}
-
-// ===== LICENCIA (primer inicio y verificación en cada apertura) =====
 
 #[tauri::command]
 pub fn estado_licencia(state: State<DbConnection>) -> Result<EstadoLicencia, String> {
-    let conn = state.0.lock().map_err(|e| e.to_string())?;
-
-    let fila: Option<(String, String, Option<String>)> = conn
-        .query_row(
-            "SELECT estado, tipo_licencia, fecha_expiracion FROM licencia_sistema WHERE id = 1",
-            [],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-        )
-        .ok();
-
-    let Some((estado, tipo_licencia, fecha_expiracion)) = fila else {
-        return Ok(EstadoLicencia { activa: false, tipo_licencia: None, fecha_expiracion: None });
-    };
-
-    if estado != "activa" {
-        return Ok(EstadoLicencia { activa: false, tipo_licencia: Some(tipo_licencia), fecha_expiracion });
-    }
-
-    if tipo_licencia == "permanente" {
-        return Ok(EstadoLicencia { activa: true, tipo_licencia: Some(tipo_licencia), fecha_expiracion });
-    }
-
-    // Licencia temporal: verificar expiración contra la fecha/hora local del sistema.
-    let vigente: bool = conn
-        .query_row(
-            "SELECT fecha_expiracion > datetime('now','localtime') FROM licencia_sistema WHERE id = 1",
-            [],
-            |row| row.get(0),
-        )
-        .unwrap_or(false);
-
-    if !vigente {
-        conn.execute("UPDATE licencia_sistema SET estado = 'expirada' WHERE id = 1", [])
-            .map_err(|e| e.to_string())?;
-        return Ok(EstadoLicencia { activa: false, tipo_licencia: Some(tipo_licencia), fecha_expiracion });
-    }
-
-    Ok(EstadoLicencia { activa: true, tipo_licencia: Some(tipo_licencia), fecha_expiracion })
+    let conn = state.0.lock().map_err(crate::errors::bloqueo)?;
+    licencia::estado(&conn)
 }
 
-/// Activa una licencia validando la firma del código y bloqueando su reuso:
-/// cada código, sin importar su tipo, solo puede canjearse una vez en la
-/// vida (queda registrado en `codigos_activacion_usados`), evitando que un
-/// código temporal expirado se reactive infinitamente.
 #[tauri::command]
 pub fn activar_licencia(state: State<DbConnection>, codigo: String) -> Result<EstadoLicencia, String> {
-    let payload = verificar_codigo(&codigo)?;
-    let codigo_normalizado = codigo.trim().to_uppercase();
-
-    let mut conn = state.0.lock().map_err(|e| e.to_string())?;
-    let tx = conn.transaction().map_err(|e| e.to_string())?;
-
-    let ya_usado: bool = tx.query_row(
-        "SELECT EXISTS(SELECT 1 FROM codigos_activacion_usados WHERE codigo = ?1)",
-        [&codigo_normalizado],
-        |row| row.get(0),
-    ).map_err(|e| e.to_string())?;
-    if ya_usado {
-        return Err("Este código de activación ya fue utilizado y no puede reutilizarse.".to_string());
-    }
-
-    let resultado = match payload.tipo {
-        TipoLicencia::Permanente => {
-            tx.execute(
-                "INSERT INTO licencia_sistema (id, codigo_activacion, tipo_licencia, fecha_expiracion, estado)
-                 VALUES (1, ?1, 'permanente', NULL, 'activa')
-                 ON CONFLICT(id) DO UPDATE SET
-                    codigo_activacion = excluded.codigo_activacion,
-                    tipo_licencia = 'permanente',
-                    fecha_expiracion = NULL,
-                    estado = 'activa'",
-                [&codigo_normalizado],
-            ).map_err(|e| e.to_string())?;
-            EstadoLicencia { activa: true, tipo_licencia: Some("permanente".into()), fecha_expiracion: None }
-        }
-        TipoLicencia::Temporal => {
-            let fecha_expiracion: String = tx.query_row(
-                "SELECT datetime('now','localtime', ?1)",
-                [format!("+{} days", payload.dias)],
-                |row| row.get(0),
-            ).map_err(|e| e.to_string())?;
-
-            tx.execute(
-                "INSERT INTO licencia_sistema (id, codigo_activacion, tipo_licencia, fecha_expiracion, estado)
-                 VALUES (1, ?1, 'temporal', ?2, 'activa')
-                 ON CONFLICT(id) DO UPDATE SET
-                    codigo_activacion = excluded.codigo_activacion,
-                    tipo_licencia = 'temporal',
-                    fecha_expiracion = excluded.fecha_expiracion,
-                    estado = 'activa'",
-                (&codigo_normalizado, &fecha_expiracion),
-            ).map_err(|e| e.to_string())?;
-            EstadoLicencia { activa: true, tipo_licencia: Some("temporal".into()), fecha_expiracion: Some(fecha_expiracion) }
-        }
-    };
-
-    tx.execute(
-        "INSERT INTO codigos_activacion_usados (codigo) VALUES (?1)",
-        [&codigo_normalizado],
-    ).map_err(|e| e.to_string())?;
-
-    tx.commit().map_err(|e| e.to_string())?;
-    Ok(resultado)
+    let mut conn = state.0.lock().map_err(crate::errors::bloqueo)?;
+    let tx = conn.transaction().map_err(crate::errors::bd)?;
+    let estado = licencia::activar(&tx, &codigo)?;
+    tx.commit().map_err(crate::errors::bd)?;
+    Ok(estado)
 }
-
-// ===== REGISTRO DE USUARIO ÚNICO (se desactiva permanentemente tras el primero) =====
 
 #[tauri::command]
 pub fn existe_usuario_registrado(state: State<DbConnection>) -> Result<bool, String> {
-    let conn = state.0.lock().map_err(|e| e.to_string())?;
-    let total: i64 = conn.query_row("SELECT COUNT(*) FROM usuarios", [], |row| row.get(0))
-        .map_err(|e| e.to_string())?;
-    Ok(total > 0)
+    let conn = state.0.lock().map_err(crate::errors::bloqueo)?;
+    usuarios::existe_registrado(&conn)
 }
 
 #[tauri::command]
 pub fn registrar_usuario(
     state: State<DbConnection>,
-    codigo_maestro: String,
     username: String,
     password: String,
     codigo_admin: String,
     nombre_completo: Option<String>,
 ) -> Result<Usuario, String> {
-    let conn = state.0.lock().map_err(|e| e.to_string())?;
-
-    let total: i64 = conn.query_row("SELECT COUNT(*) FROM usuarios", [], |row| row.get(0))
-        .map_err(|e| e.to_string())?;
-    if total > 0 {
-        return Err("Ya existe un usuario registrado; el registro está desactivado".to_string());
-    }
-
-    if codigo_maestro.trim() != CODIGO_MAESTRO_REGISTRO {
-        return Err("Código maestro de registro no válido".to_string());
-    }
-
-    if username.trim().is_empty() || password.is_empty() {
-        return Err("El usuario y la contraseña son obligatorios".to_string());
-    }
-
-    let password_hash = hash(&password, DEFAULT_COST).map_err(|e| e.to_string())?;
-    if codigo_admin.trim().len() < 4 {
-        return Err("El código de seguridad debe tener al menos 4 caracteres".to_string());
-    }
-    let codigo_admin_hash = hash(codigo_admin.trim(), DEFAULT_COST).map_err(|e| e.to_string())?;
-
-    let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
-    tx.execute(
-        "INSERT INTO usuarios (username, password_hash, nombre_completo) VALUES (?1, ?2, ?3)",
-        (&username, &password_hash, &nombre_completo),
-    ).map_err(|e| e.to_string())?;
-    let usuario_id = tx.last_insert_rowid();
-    tx.execute(
-        "INSERT INTO configuracion_seguridad (id, codigo_admin_hash) VALUES (1, ?1)",
-        [&codigo_admin_hash],
-    ).map_err(|e| e.to_string())?;
-    tx.commit().map_err(|e| e.to_string())?;
-
-    Ok(Usuario {
-        id: usuario_id,
-        username,
-    })
+    let mut conn = state.0.lock().map_err(crate::errors::bloqueo)?;
+    let tx = conn.transaction().map_err(crate::errors::bd)?;
+    let usuario = usuarios::registrar(&tx, &username, &password, &codigo_admin, nombre_completo)?;
+    tx.commit().map_err(crate::errors::bd)?;
+    Ok(usuario)
 }
 
-// ===== LOGIN (cada vez que se abre la app) =====
-
 #[tauri::command]
-pub fn iniciar_sesion(state: State<DbConnection>, username: String, password: String) -> Result<Usuario, String> {
-    let conn = state.0.lock().map_err(|e| e.to_string())?;
-
-    let (id, password_hash): (i64, String) = conn.query_row(
-        "SELECT id, password_hash FROM usuarios WHERE username = ?1",
-        [&username],
-        |row| Ok((row.get(0)?, row.get(1)?)),
-    ).map_err(|_| "Usuario o contraseña incorrectos".to_string())?;
-
-    let valido = verify(&password, &password_hash).map_err(|e| e.to_string())?;
-    if !valido {
-        return Err("Usuario o contraseña incorrectos".to_string());
-    }
-
-    Ok(Usuario { id, username })
+pub fn iniciar_sesion(
+    state: State<DbConnection>,
+    username: String,
+    password: String,
+) -> Result<Usuario, String> {
+    let conn = state.0.lock().map_err(crate::errors::bloqueo)?;
+    usuarios::iniciar_sesion(&conn, &username, &password)
 }
