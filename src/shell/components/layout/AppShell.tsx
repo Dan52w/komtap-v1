@@ -5,8 +5,10 @@ import { Dashboard } from "../dashboard/Dashboard";
 import { Inventario } from "../productos/Inventario";
 import { Proveedores } from "../proveedores/Proveedores";
 import { Ventas } from "../ventas/Ventas";
+import { Clientes } from "../clientes/Clientes";
 import { Gastos } from "../gastos/Gastos";
 import { Reportes } from "../reportes/Reportes";
+import { Ajustes } from "../ajustes/Ajustes";
 import type { Modulo } from "../../types/navegacion";
 
 export function AppShell() {
@@ -32,8 +34,10 @@ export function AppShell() {
           {moduloActivo === "inventario" && <Inventario />}
           {moduloActivo === "proveedores" && <Proveedores />}
           {moduloActivo === "ventas" && <Ventas />}
+          {moduloActivo === "clientes" && <Clientes />}
           {moduloActivo === "gastos" && <Gastos />}
           {moduloActivo === "reportes" && <Reportes />}
+          {moduloActivo === "ajustes" && <Ajustes />}
         </main>
       </div>
     </div>

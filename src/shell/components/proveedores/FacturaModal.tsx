@@ -4,8 +4,8 @@ import { Modal } from "../common/Modal";
 import { AbonoForm } from "./AbonoForm";
 import type { AbonoInput, ItemFactura, NuevaFacturaInput } from "../../types/proveedores";
 import type { Producto } from "../../types/productos";
+import { dinero } from "../../lib/format";
 
-const dinero = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 const hoy = new Date().toISOString().slice(0, 10);
 
 type Linea = ItemFactura & { etiqueta: string };
@@ -121,7 +121,7 @@ export function FacturaModal({ proveedorId, onCerrar, onGuardar }: Props) {
           {lineas.map((x, i) => (
             <div className="report-row" key={i}>
               <span>{x.etiqueta} · {x.cantidad} u.</span>
-              <b>{dinero.format(x.cantidad * x.costo_unitario)}</b>
+              <b>{dinero(x.cantidad * x.costo_unitario)}</b>
               <button type="button" className="danger-link" onClick={() => setLineas(lineas.filter((_, n) => n !== i))}>
                 Quitar
               </button>
@@ -254,7 +254,7 @@ export function FacturaModal({ proveedorId, onCerrar, onGuardar }: Props) {
         )}
         {conAbonoInicial && abonoInicial && (
           <p className="form-hint">
-            Abono inicial listo: {dinero.format(abonoInicial.monto)} ({abonoInicial.metodo_pago}). Se registrará al guardar la factura.
+            Abono inicial listo: {dinero(abonoInicial.monto)} ({abonoInicial.metodo_pago}). Se registrará al guardar la factura.
           </p>
         )}
 

@@ -3,26 +3,28 @@ import { useGastos } from "../../../hooks/useGastos";
 import { GastoFormModal } from "./GastoFormModal";
 import { TablaGastos } from "./TablaGastos";
 import { escapar, imprimirDocumento } from "../../lib/imprimir";
+import { dinero as moneda, mesActualISO } from "../../lib/format";
+import type { Gasto } from "../../types/gastos";
 
-const moneda = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
-const mesActual = new Date().toISOString().slice(0, 7);
+const mesActual = mesActualISO();
 
 export function Gastos() {
   const [mes, setMes] = useState(mesActual);
   const [nuevo, setNuevo] = useState(false);
-  const { lista, error, crear, eliminar } = useGastos(mes);
+  const [editando, setEditando] = useState<Gasto | null>(null);
+  const { lista, error, crear, actualizar, eliminar } = useGastos(mes);
   const total = lista.reduce((acc, g) => acc + g.monto, 0);
 
   const generarPdf = () => {
     imprimirDocumento(
       `Gastos — ${mes}`,
       `<div class="summary">
-         <div><span>Total del mes</span><strong>${moneda.format(total)}</strong></div>
+         <div><span>Total del mes</span><strong>${moneda(total)}</strong></div>
          <div><span>Movimientos</span><strong>${lista.length}</strong></div>
        </div>
        <table>
          <tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Método</th><th class="right">Monto</th></tr>
-         ${lista.map((g) => `<tr><td>${g.fecha.slice(0,10)}</td><td>${escapar(g.descripcion)}</td><td>${escapar(g.categoria)}</td><td>${escapar(g.metodo_pago)}</td><td class="right">${moneda.format(g.monto)}</td></tr>`).join("")}
+         ${lista.map((g) => `<tr><td>${g.fecha.slice(0,10)}</td><td>${escapar(g.descripcion)}</td><td>${escapar(g.categoria)}</td><td>${escapar(g.metodo_pago)}</td><td class="right">${moneda(g.monto)}</td></tr>`).join("")}
        </table>`
     );
   };
@@ -51,7 +53,7 @@ export function Gastos() {
       <section className="summary-strip">
         <div>
           <span>Total del mes</span>
-          <strong className="amount--negative">{moneda.format(total)}</strong>
+          <strong className="amount--negative">{moneda(total)}</strong>
         </div>
         <div>
           <span>Movimientos</span>
@@ -59,7 +61,7 @@ export function Gastos() {
         </div>
       </section>
 
-      <TablaGastos gastos={lista} onEliminar={eliminar} />
+      <TablaGastos gastos={lista} onEditar={setEditando} onEliminar={eliminar} />
 
       {nuevo && (
         <GastoFormModal
@@ -67,6 +69,23 @@ export function Gastos() {
           onGuardar={async (g) => {
             await crear(g);
             setNuevo(false);
+          }}
+        />
+      )}
+
+      {editando && (
+        <GastoFormModal
+          inicial={editando}
+          onCerrar={() => setEditando(null)}
+          onGuardar={async (g) => {
+            await actualizar(editando.id, {
+              descripcion: g.descripcion,
+              monto: g.monto,
+              fecha: g.fecha ?? editando.fecha,
+              categoria: g.categoria ?? editando.categoria,
+              metodo_pago: g.metodo_pago ?? editando.metodo_pago,
+            });
+            setEditando(null);
           }}
         />
       )}

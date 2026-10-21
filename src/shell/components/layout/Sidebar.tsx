@@ -5,8 +5,10 @@ const NAV_ITEMS: { label: string; modulo: Modulo; icon: string }[] = [
   { label: "Inventario", modulo: "inventario", icon: "▤" },
   { label: "Proveedores", modulo: "proveedores", icon: "⇄" },
   { label: "Ventas", modulo: "ventas", icon: "◆" },
+  { label: "Clientes", modulo: "clientes", icon: "◈" },
   { label: "Gastos", modulo: "gastos", icon: "◉" },
   { label: "Reportes", modulo: "reportes", icon: "▥" },
+  { label: "Ajustes", modulo: "ajustes", icon: "⚙" },
 ];
 
 type Props = { moduloActivo: Modulo; onNavegar: (modulo: Modulo) => void };

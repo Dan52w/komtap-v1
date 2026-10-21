@@ -1,21 +1,21 @@
 import { FormEvent, useState } from "react";
 import { Modal } from "../common/Modal";
-import type { NuevoGasto } from "../../types/gastos";
+import { CATEGORIAS_GASTO, type Gasto, type GastoActualizado, type NuevoGasto } from "../../types/gastos";
 
-const CATEGORIAS = ["General", "Arriendo", "Servicios", "Nómina", "Mantenimiento", "Varios"];
 const METODOS_PAGO = ["Efectivo", "Transferencia", "Tarjeta", "Otro"];
 
 type Props = {
+  inicial?: Gasto | null;
   onCerrar: () => void;
-  onGuardar: (gasto: NuevoGasto) => Promise<void>;
+  onGuardar: (gasto: NuevoGasto | GastoActualizado) => Promise<void>;
 };
 
-export function GastoFormModal({ onCerrar, onGuardar }: Props) {
-  const [descripcion, setDescripcion] = useState("");
-  const [monto, setMonto] = useState(0);
-  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
-  const [categoria, setCategoria] = useState("General");
-  const [metodoPago, setMetodoPago] = useState("Efectivo");
+export function GastoFormModal({ inicial, onCerrar, onGuardar }: Props) {
+  const [descripcion, setDescripcion] = useState(inicial?.descripcion ?? "");
+  const [monto, setMonto] = useState(inicial?.monto ?? 0);
+  const [fecha, setFecha] = useState((inicial?.fecha ?? new Date().toISOString()).slice(0, 10));
+  const [categoria, setCategoria] = useState(inicial?.categoria ?? "General");
+  const [metodoPago, setMetodoPago] = useState(inicial?.metodo_pago ?? "Efectivo");
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -28,7 +28,7 @@ export function GastoFormModal({ onCerrar, onGuardar }: Props) {
     }
     setGuardando(true);
     try {
-      await onGuardar({ descripcion, monto, fecha, categoria, metodo_pago: metodoPago });
+      await onGuardar({ descripcion: descripcion.trim(), monto, fecha, categoria, metodo_pago: metodoPago });
     } catch (err) {
       setError(String(err));
     } finally {
@@ -37,7 +37,7 @@ export function GastoFormModal({ onCerrar, onGuardar }: Props) {
   };
 
   return (
-    <Modal titulo="Registrar gasto" onCerrar={onCerrar}>
+    <Modal titulo={inicial ? "Editar gasto" : "Registrar gasto"} onCerrar={onCerrar}>
       <form className="form-grid" onSubmit={handleSubmit}>
         <label>Descripción</label>
         <input autoFocus value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
@@ -57,7 +57,7 @@ export function GastoFormModal({ onCerrar, onGuardar }: Props) {
           <div>
             <label>Categoría</label>
             <select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
-              {CATEGORIAS.map((c) => (
+              {CATEGORIAS_GASTO.map((c) => (
                 <option key={c}>{c}</option>
               ))}
             </select>
@@ -79,7 +79,7 @@ export function GastoFormModal({ onCerrar, onGuardar }: Props) {
             Cancelar
           </button>
           <button className="btn btn--primary" disabled={guardando}>
-            {guardando ? "Guardando…" : "Registrar"}
+            {guardando ? "Guardando…" : inicial ? "Guardar cambios" : "Registrar"}
           </button>
         </div>
       </form>

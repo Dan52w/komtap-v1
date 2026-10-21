@@ -1,6 +1,5 @@
 import type { FacturaConProveedor } from "../../../hooks/useReportes";
-
-const dinero = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+import { dinero } from "../../lib/format";
 
 export function ReporteFacturas({ facturas }: { facturas: FacturaConProveedor[] }) {
   return (
@@ -12,10 +11,10 @@ export function ReporteFacturas({ facturas }: { facturas: FacturaConProveedor[] 
           <span>
             <strong>{x.numero_factura || x.id}</strong>
             <small>
-              Total {dinero.format(x.monto_total)} · Abonado {dinero.format(x.monto_total - x.saldo_pendiente)} · {x.fecha_emision} ({x.proveedor})
+              Total {dinero(x.monto_total)} · Abonado {dinero(x.monto_total - x.saldo_pendiente)} · {x.fecha_emision} ({x.proveedor})
             </small>
           </span>
-          <b>{dinero.format(x.saldo_pendiente)}</b>
+          <b>{dinero(x.saldo_pendiente)}</b>
         </div>
       ))}
     </section>

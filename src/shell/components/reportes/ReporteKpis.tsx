@@ -1,6 +1,5 @@
 import type { DashboardFinanciero } from "../../types/reportes";
-
-const dinero = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+import { dinero } from "../../lib/format";
 
 type Props = { financiero: DashboardFinanciero | null; deudaProveedores: number };
 
@@ -9,14 +8,14 @@ export function ReporteKpis({ financiero, deudaProveedores }: Props) {
 
   return (
     <section className="report-kpis">
-      <Kpi label="Dinero ingresado" value={dinero.format(financiero.dinero_ingresado)} tone="positive" />
+      <Kpi label="Dinero ingresado" value={dinero(financiero.dinero_ingresado)} tone="positive" />
       <Kpi
         label="Ganancia neta real"
-        value={dinero.format(financiero.ganancia_neta_real)}
+        value={dinero(financiero.ganancia_neta_real)}
         tone={financiero.ganancia_neta_real >= 0 ? "positive" : "negative"}
       />
-      <Kpi label="Dinero gastado" value={dinero.format(financiero.dinero_gastado)} tone="negative" />
-      <Kpi label="Deuda con proveedores" value={dinero.format(deudaProveedores)} tone="warning" />
+      <Kpi label="Dinero gastado" value={dinero(financiero.dinero_gastado)} tone="negative" />
+      <Kpi label="Deuda con proveedores" value={dinero(deudaProveedores)} tone="warning" />
     </section>
   );
 }

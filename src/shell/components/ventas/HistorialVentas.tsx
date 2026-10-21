@@ -1,6 +1,5 @@
 import type { Venta } from "../../types/ventas";
-
-const dinero = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+import { dinero } from "../../lib/format";
 
 type Props = {
   ventas: Venta[];
@@ -29,9 +28,10 @@ export function HistorialVentas({ ventas, hayMas, cargando, onCargarMas, onVerDe
             <span>{v.fecha.slice(0, 16)}</span>
             <small>
               {v.metodo_pago} · {v.estado_pago}
+              {(v.cliente_nombre || v.referencia_cliente) && ` · ${v.cliente_nombre ?? v.referencia_cliente}`}
             </small>
           </div>
-          <strong>{dinero.format(v.total_neto)}</strong>
+          <strong>{dinero(v.total_neto)}</strong>
         </article>
       ))}
 

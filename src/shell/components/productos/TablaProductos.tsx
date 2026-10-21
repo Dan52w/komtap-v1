@@ -1,4 +1,5 @@
 import type { Producto } from "../../types/productos";
+import { dinero } from "../../lib/format";
 
 type Props = {
   productos: Producto[];
@@ -6,12 +7,6 @@ type Props = {
   onAjustarStock: (producto: Producto) => void;
   onEliminar: (producto: Producto) => void;
 };
-
-const formatoMoneda = new Intl.NumberFormat("es-CO", {
-  style: "currency",
-  currency: "COP",
-  maximumFractionDigits: 0,
-});
 
 function estadoStock(p: Producto): { texto: string; clase: string } {
   if (p.stock_actual === 0) return { texto: "Agotado", clase: "rojo" };
@@ -52,8 +47,8 @@ export function TablaProductos({ productos, onEditar, onAjustarStock, onEliminar
                 <td>{p.categoria}</td>
                 <td>{p.talla}</td>
                 <td>{p.color ?? "—"}</td>
-                <td>{formatoMoneda.format(p.costo_unitario)}</td>
-                <td>{formatoMoneda.format(p.precio_venta)}</td>
+                <td>{dinero(p.costo_unitario)}</td>
+                <td>{dinero(p.precio_venta)}</td>
                 <td>{p.stock_actual}</td>
                 <td>
                   <span className={`badge badge--${estado.clase}`}>{estado.texto}</span>

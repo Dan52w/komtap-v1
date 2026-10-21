@@ -1,6 +1,5 @@
 import type { Gasto } from "../../types/gastos";
-
-const dinero = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+import { dinero } from "../../lib/format";
 
 export function ReporteGastos({ gastos }: { gastos: Gasto[] }) {
   return (
@@ -10,7 +9,7 @@ export function ReporteGastos({ gastos }: { gastos: Gasto[] }) {
       {gastos.map((x) => (
         <div className="report-row" key={x.id}>
           <span>{x.descripcion}<small>{x.categoria}</small></span>
-          <b>{dinero.format(x.monto)}</b>
+          <b>{dinero(x.monto)}</b>
         </div>
       ))}
     </section>

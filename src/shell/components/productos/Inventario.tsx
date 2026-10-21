@@ -7,14 +7,9 @@ import { ProductoFormModal } from "./ProductoFormModal";
 import { AjusteStockModal } from "./AjusteStockModal";
 import { TopPrendas } from "./TopPrendas";
 import type { FiltroProductos, Producto } from "../../types/productos";
+import { dinero } from "../../lib/format";
 
 type Tab = "catalogo" | "top";
-
-const formatoMoneda = new Intl.NumberFormat("es-CO", {
-  style: "currency",
-  currency: "COP",
-  maximumFractionDigits: 0,
-});
 
 export function Inventario() {
   const [tab, setTab] = useState<Tab>("catalogo");
@@ -98,7 +93,7 @@ export function Inventario() {
               <span className="mini-stat__label">Stock bajo</span>
             </div>
             <div className="mini-stat mini-stat--positivo">
-              <span className="mini-stat__valor">{formatoMoneda.format(stats.valor)}</span>
+              <span className="mini-stat__valor">{dinero(stats.valor)}</span>
               <span className="mini-stat__label">Valor a costo</span>
             </div>
           </section>

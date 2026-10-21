@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Modal } from "../common/Modal";
 import { seguridad, ventas as ventasApi } from "../../lib/api";
 import { escapar, imprimirDocumento } from "../../lib/imprimir";
-import type { Venta, ItemVenta } from "../../types/ventas";
+import { dinero, fechaHora } from "../../lib/format";
+import type { Venta, ItemVenta, AbonoVenta } from "../../types/ventas";
 
-const dinero = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 const METODOS_PAGO = ["Efectivo", "Transferencia", "Tarjeta", "Mixto", "Credito"];
 
 type Props = {
@@ -17,22 +17,39 @@ type AccionProtegida = "editar" | "eliminar";
 
 export function DetalleVentaModal({ venta, onCerrar, onGuardado }: Props) {
   const [filas, setFilas] = useState<ItemVenta[]>([]);
+  const [abonos, setAbonos] = useState<AbonoVenta[]>([]);
   const [editando, setEditando] = useState(false);
   const [modoCodigo, setModoCodigo] = useState<"crear" | "verificar" | null>(null);
   const [accionPendiente, setAccionPendiente] = useState<AccionProtegida | null>(null);
   const [codigo, setCodigo] = useState("");
   const [metodo, setMetodo] = useState(venta.metodo_pago);
   const [descuento, setDescuento] = useState(venta.descuento);
+  const [mostrarAbono, setMostrarAbono] = useState(false);
+  const [montoAbono, setMontoAbono] = useState("");
+  const [metodoAbono, setMetodoAbono] = useState("Efectivo");
+  const [notaAbono, setNotaAbono] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
+  const cargarAbonos = async () => {
+    try {
+      setAbonos(await ventasApi.listarAbonos(venta.id));
+    } catch {
+      // Si falla, simplemente no se muestran; no bloquea el detalle.
+    }
+  };
+
   useEffect(() => {
     void ventasApi.listarItems(venta.id).then(setFilas);
+    void cargarAbonos();
     setMetodo(venta.metodo_pago);
     setDescuento(venta.descuento);
     setEditando(false);
     setModoCodigo(null);
     setAccionPendiente(null);
+    setMostrarAbono(false);
+    setMontoAbono("");
+    setNotaAbono("");
   }, [venta]);
 
   const subtotal = filas.reduce((acc, x) => acc + x.cantidad * x.precio_unitario, 0);
@@ -104,14 +121,40 @@ export function DetalleVentaModal({ venta, onCerrar, onGuardado }: Props) {
     }
   };
 
+  const registrarAbono = async () => {
+    const monto = Number(montoAbono);
+    if (!monto || monto <= 0) {
+      setError("Indica un monto válido para el abono");
+      return;
+    }
+    setGuardando(true);
+    setError(null);
+    try {
+      await ventasApi.registrarAbono(venta.id, {
+        monto,
+        metodo_pago: metodoAbono,
+        nota: notaAbono.trim() || null,
+      });
+      setMontoAbono("");
+      setNotaAbono("");
+      setMostrarAbono(false);
+      await cargarAbonos();
+      await onGuardado();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setGuardando(false);
+    }
+  };
+
   const imprimir = () => {
     const filasHtml = filas.map((fila) => `
       <tr><td>${escapar(fila.producto_nombre)}</td><td class="right">${fila.cantidad}</td>
-      <td class="right">${dinero.format(fila.precio_unitario)}</td><td class="right">${dinero.format(fila.cantidad * fila.precio_unitario)}</td></tr>`).join("");
+      <td class="right">${dinero(fila.precio_unitario)}</td><td class="right">${dinero(fila.cantidad * fila.precio_unitario)}</td></tr>`).join("");
     imprimirDocumento(`Comprobante venta #${venta.id}`, `
-      <p><strong>Komtap</strong><br>Comprobante de venta #${venta.id}<br>${escapar(venta.fecha)}</p>
+      <p><strong>Komtap</strong><br>Comprobante de venta #${venta.id}<br>${escapar(venta.fecha)}${venta.cliente_nombre ? `<br>Cliente: ${escapar(venta.cliente_nombre)}` : ""}${!venta.cliente_nombre && venta.referencia_cliente ? `<br>Cliente: ${escapar(venta.referencia_cliente)}` : ""}</p>
       <table><thead><tr><th>Artículo</th><th class="right">Cant.</th><th class="right">Precio</th><th class="right">Subtotal</th></tr></thead><tbody>${filasHtml}</tbody></table>
-      <div class="summary"><div><span>Subtotal</span><strong>${dinero.format(subtotal)}</strong></div><div><span>Descuento</span><strong>${dinero.format(descuento)}</strong></div><div><span>Total</span><strong>${dinero.format(editando ? totalNeto : venta.total_neto)}</strong></div></div>
+      <div class="summary"><div><span>Subtotal</span><strong>${dinero(subtotal)}</strong></div><div><span>Descuento</span><strong>${dinero(descuento)}</strong></div><div><span>Total</span><strong>${dinero(editando ? totalNeto : venta.total_neto)}</strong></div></div>
       <p>Método de pago: ${escapar(editando ? metodo : venta.metodo_pago)} · Estado: ${escapar(venta.estado_pago)}</p>`);
   };
 
@@ -132,6 +175,7 @@ export function DetalleVentaModal({ venta, onCerrar, onGuardado }: Props) {
         </header>
 
         {venta.referencia_cliente && <p className="sale-receipt__customer">Cliente: <strong>{venta.referencia_cliente}</strong></p>}
+        {venta.cliente_nombre && <p className="sale-receipt__customer">Cliente registrado: <strong>{venta.cliente_nombre}</strong></p>}
 
         <div className="tabla-card sale-receipt__table">
           <table className="tabla-base">
@@ -141,8 +185,8 @@ export function DetalleVentaModal({ venta, onCerrar, onGuardado }: Props) {
                 <tr key={f.id}>
                   <td><strong>{f.producto_nombre}</strong></td>
                   <td>{editando ? <input aria-label={`Cantidad de ${f.producto_nombre}`} type="number" min="1" value={f.cantidad} onChange={(e) => setFilas(filas.map((x, n) => n === i ? { ...x, cantidad: Math.max(1, Number(e.target.value)) } : x))} /> : f.cantidad}</td>
-                  <td>{editando ? <input aria-label={`Precio de ${f.producto_nombre}`} type="number" min="0" value={f.precio_unitario} onChange={(e) => setFilas(filas.map((x, n) => n === i ? { ...x, precio_unitario: Math.max(0, Number(e.target.value)) } : x))} /> : dinero.format(f.precio_unitario)}</td>
-                  <td className="amount"><strong>{dinero.format(f.cantidad * f.precio_unitario)}</strong></td>
+                  <td>{editando ? <input aria-label={`Precio de ${f.producto_nombre}`} type="number" min="0" value={f.precio_unitario} onChange={(e) => setFilas(filas.map((x, n) => n === i ? { ...x, precio_unitario: Math.max(0, Number(e.target.value)) } : x))} /> : dinero(f.precio_unitario)}</td>
+                  <td className="amount"><strong>{dinero(f.cantidad * f.precio_unitario)}</strong></td>
                   {editando && <td className="table-actions"><button className="danger-link" type="button" onClick={() => setFilas(filas.filter((_, n) => n !== i))}>Eliminar</button></td>}
                 </tr>
               ))}
@@ -159,11 +203,64 @@ export function DetalleVentaModal({ venta, onCerrar, onGuardado }: Props) {
         )}
 
         <div className="sale-receipt__totals">
-          <div><span>Subtotal</span><strong>{dinero.format(subtotal)}</strong></div>
-          <div><span>Descuento</span><strong>{dinero.format(descuento)}</strong></div>
-          <div className="sale-receipt__grand-total"><span>Total</span><strong>{dinero.format(editando ? totalNeto : venta.total_neto)}</strong></div>
+          <div><span>Subtotal</span><strong>{dinero(subtotal)}</strong></div>
+          <div><span>Descuento</span><strong>{dinero(descuento)}</strong></div>
+          <div className="sale-receipt__grand-total"><span>Total</span><strong>{dinero(editando ? totalNeto : venta.total_neto)}</strong></div>
+          <div><span>Pagado</span><strong>{dinero(venta.monto_pagado)}</strong></div>
+          <div><span>Saldo pendiente</span><strong>{dinero(venta.saldo_pendiente)}</strong></div>
         </div>
       </section>
+
+      {!editando && venta.saldo_pendiente > 0 && (
+        <section className="abonos-section">
+          <div className="abonos-section__header">
+            <h4>Abonos registrados</h4>
+            <button type="button" className="btn btn--ghost" onClick={() => setMostrarAbono((v) => !v)}>
+              {mostrarAbono ? "Cancelar" : "+ Registrar abono"}
+            </button>
+          </div>
+          {abonos.length === 0 ? (
+            <p className="empty-state">Aún no hay abonos para esta venta.</p>
+          ) : (
+            <ul className="abonos-list">
+              {abonos.map((a) => (
+                <li key={a.id}>
+                  <span>{fechaHora(a.fecha)} · {a.metodo_pago}{a.nota ? ` · ${a.nota}` : ""}</span>
+                  <strong>{dinero(a.monto)}</strong>
+                </li>
+              ))}
+            </ul>
+          )}
+          {mostrarAbono && (
+            <div className="abono-form">
+              <label>
+                Monto
+                <input
+                  type="number"
+                  min="1"
+                  max={venta.saldo_pendiente}
+                  value={montoAbono}
+                  onChange={(e) => setMontoAbono(e.target.value)}
+                  placeholder={`Máx. ${dinero(venta.saldo_pendiente)}`}
+                />
+              </label>
+              <label>
+                Método
+                <select value={metodoAbono} onChange={(e) => setMetodoAbono(e.target.value)}>
+                  {METODOS_PAGO.map((m) => <option key={m}>{m}</option>)}
+                </select>
+              </label>
+              <label>
+                Nota (opcional)
+                <input value={notaAbono} onChange={(e) => setNotaAbono(e.target.value)} placeholder="Ej. Abono quincenal" />
+              </label>
+              <button type="button" className="btn btn--primary" disabled={guardando} onClick={() => void registrarAbono()}>
+                {guardando ? "Guardando…" : "Guardar abono"}
+              </button>
+            </div>
+          )}
+        </section>
+      )}
 
       {error && <p className="form-error">{error}</p>}
 

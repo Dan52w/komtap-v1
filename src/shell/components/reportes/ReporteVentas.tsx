@@ -1,6 +1,5 @@
 import type { Venta } from "../../types/ventas";
-
-const dinero = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+import { dinero } from "../../lib/format";
 
 export function ReporteVentas({ ventas }: { ventas: Venta[] }) {
   return (
@@ -10,7 +9,7 @@ export function ReporteVentas({ ventas }: { ventas: Venta[] }) {
       {ventas.map((x) => (
         <div className="report-row" key={x.id}>
           <span>Venta #{x.id}<small>{x.fecha.slice(0, 10)}</small></span>
-          <b>{dinero.format(x.total_neto)}</b>
+          <b>{dinero(x.total_neto)}</b>
         </div>
       ))}
     </section>

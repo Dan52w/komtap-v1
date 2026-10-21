@@ -3,11 +3,7 @@ import { KpiCard } from "./KpiCard";
 import { StockCriticoList } from "./StockCriticoList";
 import type { Periodo } from "../../types/reportes";
 import { useDashboard } from "../../../hooks/useDashboard";
-
-function mesActualISO(): string {
-  const hoy = new Date();
-  return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
-}
+import { dinero, mesActualISO } from "../../lib/format";
 
 export function Dashboard() {
   const [periodo, setPeriodo] = useState<Periodo>("dia");
@@ -59,11 +55,7 @@ export function Dashboard() {
                     <li key={v.metodo_pago}>
                       <span>{v.metodo_pago}</span>
                       <strong>
-                        {new Intl.NumberFormat("es-CO", {
-                          style: "currency",
-                          currency: "COP",
-                          maximumFractionDigits: 0,
-                        }).format(v.total)}
+                        {dinero(v.total)}
                       </strong>
                     </li>
                   ))}

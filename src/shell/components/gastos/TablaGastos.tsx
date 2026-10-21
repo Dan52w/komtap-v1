@@ -1,13 +1,13 @@
 import type { Gasto } from "../../types/gastos";
-
-const moneda = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+import { dinero as moneda } from "../../lib/format";
 
 type Props = {
   gastos: Gasto[];
+  onEditar: (gasto: Gasto) => void;
   onEliminar: (id: number) => void;
 };
 
-export function TablaGastos({ gastos, onEliminar }: Props) {
+export function TablaGastos({ gastos, onEditar, onEliminar }: Props) {
   return (
     <div className="tabla-card">
       <table className="tabla-base">
@@ -32,8 +32,11 @@ export function TablaGastos({ gastos, onEliminar }: Props) {
                 <span className="badge badge--amarillo">{g.categoria}</span>
               </td>
               <td>{g.metodo_pago}</td>
-              <td className="amount amount--negative">{moneda.format(g.monto)}</td>
-              <td>
+              <td className="amount amount--negative">{moneda(g.monto)}</td>
+              <td className="tabla-base__acciones">
+                <button className="btn btn--ghost" onClick={() => onEditar(g)}>
+                  Editar
+                </button>
                 <button
                   className="danger-link"
                   onClick={() => {

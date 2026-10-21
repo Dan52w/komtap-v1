@@ -4,8 +4,8 @@ import { escapar, imprimirDocumento } from "../../lib/imprimir";
 import { Modal } from "../common/Modal";
 import { AbonoForm } from "./AbonoForm";
 import type { AbonoProveedor, DetalleFactura, FacturaProveedor } from "../../types/proveedores";
+import { dinero } from "../../lib/format";
 
-const dinero = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 const hoy = new Date().toISOString().slice(0, 10);
 
 type Props = { factura: FacturaProveedor; onCerrar: () => void; onCambio: () => Promise<void> };
@@ -32,9 +32,9 @@ export function DetalleFacturaModal({ factura, onCerrar, onCambio }: Props) {
     imprimirDocumento(
       "Comprobante de egreso",
       `<div class="summary">
-        <div><span>Total de la compra</span><strong>${dinero.format(factura.monto_total)}</strong></div>
-        <div><span>Total abonado</span><strong>${dinero.format(abonado)}</strong></div>
-        <div><span>Saldo por deber</span><strong>${dinero.format(factura.saldo_pendiente)}</strong></div>
+        <div><span>Total de la compra</span><strong>${dinero(factura.monto_total)}</strong></div>
+        <div><span>Total abonado</span><strong>${dinero(abonado)}</strong></div>
+        <div><span>Saldo por deber</span><strong>${dinero(factura.saldo_pendiente)}</strong></div>
       </div>
       <p><strong>Factura:</strong> ${escapar(factura.numero_factura || `#${factura.id}`)} &nbsp;·&nbsp;
          <strong>Estado:</strong> ${escapar(factura.estado_pago)} &nbsp;·&nbsp;
@@ -43,12 +43,12 @@ export function DetalleFacturaModal({ factura, onCerrar, onCambio }: Props) {
       <h2>Detalles de compra</h2>
       <table>
         <tr><th>Artículo</th><th>Cantidad</th><th>Costo unit.</th><th class="right">Subtotal</th></tr>
-        ${items.map((x) => `<tr><td>${escapar(x.producto_nombre)}</td><td>${x.cantidad}</td><td>${dinero.format(x.costo_unitario)}</td><td class="right">${dinero.format(x.subtotal)}</td></tr>`).join("")}
+        ${items.map((x) => `<tr><td>${escapar(x.producto_nombre)}</td><td>${x.cantidad}</td><td>${dinero(x.costo_unitario)}</td><td class="right">${dinero(x.subtotal)}</td></tr>`).join("")}
       </table>
       <h2>Abonos</h2>
       <table>
         <tr><th>Fecha</th><th>Método</th><th>Referencia</th><th>Nota</th><th class="right">Monto</th></tr>
-        ${abonos.map((x) => `<tr><td>${escapar(x.fecha)}</td><td>${escapar(x.metodo_pago)}${x.banco ? " · " + escapar(x.banco) : ""}</td><td>${escapar(x.numero_referencia || "-")}</td><td>${escapar(x.nota || "-")}</td><td class="right">${dinero.format(x.monto)}</td></tr>`).join("")}
+        ${abonos.map((x) => `<tr><td>${escapar(x.fecha)}</td><td>${escapar(x.metodo_pago)}${x.banco ? " · " + escapar(x.banco) : ""}</td><td>${escapar(x.numero_referencia || "-")}</td><td>${escapar(x.nota || "-")}</td><td class="right">${dinero(x.monto)}</td></tr>`).join("")}
       </table>`
     );
 
@@ -66,9 +66,9 @@ export function DetalleFacturaModal({ factura, onCerrar, onCambio }: Props) {
         </div>
 
         <div className="detail-summary">
-          <span>Total<strong>{dinero.format(factura.monto_total)}</strong></span>
-          <span>Abonado<strong>{dinero.format(abonado)}</strong></span>
-          <span>Saldo<strong>{dinero.format(factura.saldo_pendiente)}</strong></span>
+          <span>Total<strong>{dinero(factura.monto_total)}</strong></span>
+          <span>Abonado<strong>{dinero(abonado)}</strong></span>
+          <span>Saldo<strong>{dinero(factura.saldo_pendiente)}</strong></span>
         </div>
 
         <button className="btn btn--ghost" onClick={imprimir}>Imprimir / Generar PDF</button>
@@ -87,9 +87,9 @@ export function DetalleFacturaModal({ factura, onCerrar, onCambio }: Props) {
                   <tr key={x.id}>
                     <td>{x.producto_nombre}</td>
                     <td>{x.cantidad}</td>
-                    <td>{dinero.format(x.costo_unitario)}</td>
-                    <td>{x.precio_venta_sugerido != null ? dinero.format(x.precio_venta_sugerido) : "—"}</td>
-                    <td className="amount">{dinero.format(x.subtotal)}</td>
+                    <td>{dinero(x.costo_unitario)}</td>
+                    <td>{x.precio_venta_sugerido != null ? dinero(x.precio_venta_sugerido) : "—"}</td>
+                    <td className="amount">{dinero(x.subtotal)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -118,7 +118,7 @@ export function DetalleFacturaModal({ factura, onCerrar, onCambio }: Props) {
                     <td>{x.metodo_pago}{x.banco ? ` · ${x.banco}` : ""}</td>
                     <td>{x.numero_referencia || "—"}</td>
                     <td>{x.nota || "—"}</td>
-                    <td className="amount">{dinero.format(x.monto)}</td>
+                    <td className="amount">{dinero(x.monto)}</td>
                   </tr>
                 ))}
               </tbody>

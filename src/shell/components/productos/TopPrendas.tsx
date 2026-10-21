@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTopPrendas } from "../../../hooks/useTopPrendas";
+import { dinero } from "../../lib/format";
 
 type RangoTop = "hoy" | "mes" | "historico";
 
@@ -10,12 +11,6 @@ function diasParaRango(rango: RangoTop): number | null {
   if (rango === "mes") return new Date().getDate();
   return null;
 }
-
-const formatoMoneda = new Intl.NumberFormat("es-CO", {
-  style: "currency",
-  currency: "COP",
-  maximumFractionDigits: 0,
-});
 
 export function TopPrendas() {
   const [rango, setRango] = useState<RangoTop>("mes");
@@ -58,8 +53,8 @@ export function TopPrendas() {
                 <td>{i + 1}</td>
                 <td>{p.nombre}</td>
                 <td>{p.unidades_vendidas}</td>
-                <td>{formatoMoneda.format(p.ingreso_total)}</td>
-                <td>{formatoMoneda.format(p.margen_estimado)}</td>
+                <td>{dinero(p.ingreso_total)}</td>
+                <td>{dinero(p.margen_estimado)}</td>
               </tr>
             ))}
           </tbody>

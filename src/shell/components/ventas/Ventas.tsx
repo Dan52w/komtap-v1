@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { productos as productosApi, ventas as ventasApi } from "../../lib/api";
+import { clientes as clientesApi, productos as productosApi, ventas as ventasApi } from "../../lib/api";
+import { dinero } from "../../lib/format";
 import type { Producto } from "../../types/productos";
 import type { Venta } from "../../types/ventas";
+import type { Cliente } from "../../types/clientes";
 import { useCarritoVenta } from "../../../hooks/useCarritoVenta";
 import { BuscadorArticulo } from "./BuscadorArticulo";
 import { CarritoItems } from "./CarritoItems";
@@ -9,11 +11,11 @@ import { DatosVenta } from "./DatosVenta";
 import { HistorialVentas } from "./HistorialVentas";
 import { DetalleVentaModal } from "./DetallesVentaModal";
 
-const dinero = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 const PAGE_SIZE = 30;
 
 export function Ventas() {
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [historial, setHistorial] = useState<Venta[]>([]);
   const [offset, setOffset] = useState(0);
   const [hayMas, setHayMas] = useState(true);
@@ -21,6 +23,7 @@ export function Ventas() {
   const [metodo, setMetodo] = useState("Efectivo");
   const [descuento, setDescuento] = useState(0);
   const [cliente, setCliente] = useState("");
+  const [clienteId, setClienteId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [ventaSeleccionada, setVentaSeleccionada] = useState<Venta | null>(null);
@@ -29,12 +32,14 @@ export function Ventas() {
   // Recarga completa: productos + primera página del historial (offset 0).
   const cargar = async () => {
     try {
-      const [p, v] = await Promise.all([
+      const [p, v, c] = await Promise.all([
         productosApi.listar(),
         ventasApi.listar({ limite: PAGE_SIZE, offset: 0 }),
+        clientesApi.listar(),
       ]);
       setProductos(p.filter((x) => x.estado === "activo" && x.stock_actual > 0));
       setHistorial(v);
+      setClientes(c);
       setOffset(v.length);
       setHayMas(v.length === PAGE_SIZE);
     } catch (e) {
@@ -79,11 +84,13 @@ export function Ventas() {
         })),
         descuento,
         metodo_pago: metodo,
-        referencia_cliente: cliente || null,
+        cliente_id: clienteId,
+        referencia_cliente: clienteId ? null : cliente || null,
       });
       carrito.limpiar();
       setDescuento(0);
       setCliente("");
+      setClienteId(null);
       await cargar(); // vuelve a la primera página con la venta nueva arriba
     } catch (e) {
       setError(String(e));
@@ -113,13 +120,16 @@ export function Ventas() {
             descuento={descuento}
             metodo={metodo}
             cliente={cliente}
+            clienteId={clienteId}
+            clientes={clientes}
             onCambiarDescuento={setDescuento}
             onCambiarMetodo={setMetodo}
             onCambiarCliente={setCliente}
+            onCambiarClienteId={setClienteId}
           />
           <div className="sale-total">
             <span>Total</span>
-            <strong>{dinero.format(carrito.total(descuento))}</strong>
+            <strong>{dinero(carrito.total(descuento))}</strong>
           </div>
           <button className="btn btn--primary sale-submit" disabled={guardando} onClick={() => void confirmar()}>
             {guardando ? "Registrando…" : "Confirmar venta"}
