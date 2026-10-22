@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { auth, respaldo, seguridad } from "../../lib/api";
+import { auth, respaldo, seguridad, seed } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import type { EstadoLicencia } from "../../types/auth";
 import { fechaHora } from "../../lib/format";
@@ -87,6 +87,27 @@ export function Ajustes() {
       // Volver a pedir verificación en el próximo cambio.
       setPasoCodigo("verificar");
       mostrarOk("Código de seguridad actualizado.");
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setOcupado(false);
+    }
+  };
+
+  const cargarEjemplo = async () => {
+    setError(null);
+    if (
+      !window.confirm(
+        "¿Cargar datos de ejemplo? Se agregarán clientes, proveedores y productos de muestra. Solo funciona si esas tablas están vacías.",
+      )
+    )
+      return;
+    setOcupado(true);
+    try {
+      const r = await seed.cargarDatosEjemplo();
+      mostrarOk(
+        `Datos de ejemplo cargados: ${r.clientes} clientes, ${r.proveedores} proveedores y ${r.productos} productos.`,
+      );
     } catch (e) {
       setError(String(e));
     } finally {
@@ -242,6 +263,19 @@ export function Ajustes() {
             </button>
             <button className="btn btn--ghost" disabled={ocupado} onClick={() => void importar()}>
               Restaurar respaldo…
+            </button>
+          </div>
+        </section>
+
+        <section className="ajustes-card">
+          <h3>Datos de ejemplo</h3>
+          <p>
+            Carga clientes, proveedores y productos de muestra para probar la aplicación.
+            Solo funciona si esas tablas están vacías.
+          </p>
+          <div className="ajustes-card__acciones">
+            <button className="btn btn--ghost" disabled={ocupado} onClick={() => void cargarEjemplo()}>
+              {ocupado ? "Cargando…" : "Cargar datos de ejemplo"}
             </button>
           </div>
         </section>

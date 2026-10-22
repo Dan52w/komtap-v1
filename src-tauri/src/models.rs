@@ -376,3 +376,13 @@ pub struct Cliente {
     #[serde(default)]
     pub notas: Option<String>,
 }
+
+// ===== Datos de ejemplo =====
+
+/// Resumen de lo cargado por la semilla de datos de ejemplo.
+#[derive(Serialize, Deserialize)]
+pub struct ResumenSeed {
+    pub clientes: i64,
+    pub proveedores: i64,
+    pub productos: i64,
+}

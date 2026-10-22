@@ -142,3 +142,8 @@ pub fn contar_usos(conn: &Connection, id: i64) -> SqlResult<(i64, i64)> {
 pub fn eliminar(conn: &Connection, id: i64) -> SqlResult<usize> {
     conn.execute("DELETE FROM productos WHERE id = ?1", [id])
 }
+
+/// Cantidad de productos en el catálogo.
+pub fn contar(conn: &Connection) -> SqlResult<i64> {
+    conn.query_row("SELECT COUNT(*) FROM productos", [], |fila| fila.get(0))
+}

@@ -11,5 +11,6 @@ pub mod productos;
 pub mod proveedores;
 pub mod reportes;
 pub mod respaldo;
+pub mod seed;
 pub mod seguridad;
 pub mod ventas;

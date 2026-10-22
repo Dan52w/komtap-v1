@@ -68,6 +68,8 @@ pub fn run() {
             // Respaldo
             commands::respaldo::exportar_respaldo,
             commands::respaldo::importar_respaldo,
+            // Datos de ejemplo
+            commands::seed::cargar_datos_ejemplo,
             // Contabilidad y reportes
             commands::reportes::dashboard_financiero,
             commands::reportes::ventas_por_metodo_pago,

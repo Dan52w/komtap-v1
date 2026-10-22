@@ -289,3 +289,8 @@ pub fn listar_abonos_factura(conn: &Connection, factura_id: i64) -> SqlResult<Ve
         .collect();
     Ok(filas)
 }
+
+/// Cantidad de proveedores registrados.
+pub fn contar(conn: &Connection) -> SqlResult<i64> {
+    conn.query_row("SELECT COUNT(*) FROM proveedores", [], |fila| fila.get(0))
+}

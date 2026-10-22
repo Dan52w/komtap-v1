@@ -12,5 +12,6 @@ pub mod inventario;
 pub mod licencia;
 pub mod reglas;
 pub mod respaldo;
+pub mod seed;
 pub mod usuarios;
 pub mod ventas;

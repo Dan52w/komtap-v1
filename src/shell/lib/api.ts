@@ -12,6 +12,7 @@ import type { Proveedor, ResumenProveedor, FacturaProveedor, FacturaPendiente, A
 import type { Gasto, NuevoGasto, GastoActualizado } from "../types/gastos";
 import type { Venta, NuevaVenta, ItemVenta } from "../types/ventas";
 import type { Cliente } from "../types/clientes";
+import type { ResumenSeed } from "../types/seed";
 
 /**
  * Wrapper delgado sobre `invoke`. Cada comando Rust falla con un `String`
@@ -140,6 +141,10 @@ export const clientes = {
 export const respaldo = {
   exportar: (ruta: string) => invoke<void>("exportar_respaldo", { ruta }),
   importar: (ruta: string) => invoke<void>("importar_respaldo", { ruta }),
+};
+
+export const seed = {
+  cargarDatosEjemplo: () => invoke<ResumenSeed>("cargar_datos_ejemplo"),
 };
 
 export const seguridad = {

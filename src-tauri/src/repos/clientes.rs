@@ -51,3 +51,8 @@ pub fn contar_ventas(conn: &Connection, id: i64) -> SqlResult<i64> {
 pub fn eliminar(conn: &Connection, id: i64) -> SqlResult<usize> {
     conn.execute("DELETE FROM clientes WHERE id = ?1", [id])
 }
+
+/// Cantidad de clientes registrados.
+pub fn contar(conn: &Connection) -> SqlResult<i64> {
+    conn.query_row("SELECT COUNT(*) FROM clientes", [], |fila| fila.get(0))
+}
