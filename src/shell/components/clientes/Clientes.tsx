@@ -125,15 +125,15 @@ export function Clientes() {
 
       {error && <p className="form-error">{error}</p>}
 
-      <div className="filtros-panel">
-        <div className="filtros-panel__row">
+      <div className="filtros-panel filtros-panel--simple">
+        <div className="filtros-panel__campo">
+          <label htmlFor="clientes-busqueda">Buscar cliente</label>
           <input
-            className="filtros-panel__input"
+            id="clientes-busqueda"
             type="search"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar por nombre, teléfono o nota…"
-            aria-label="Buscar cliente"
           />
         </div>
       </div>

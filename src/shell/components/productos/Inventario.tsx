@@ -67,13 +67,20 @@ export function Inventario() {
           <h1>Inventario</h1>
           <p className="inventario__subtitulo">Catálogo, existencias y prendas más vendidas</p>
         </div>
-        <div className="periodo-toggle">
-          <button className={tab === "catalogo" ? "activo" : ""} onClick={() => setTab("catalogo")}>
-            Catálogo
-          </button>
-          <button className={tab === "top" ? "activo" : ""} onClick={() => setTab("top")}>
-            Más vendidas
-          </button>
+        <div className="inventario__header-acciones">
+          <div className="periodo-toggle">
+            <button className={tab === "catalogo" ? "activo" : ""} onClick={() => setTab("catalogo")}>
+              Catálogo
+            </button>
+            <button className={tab === "top" ? "activo" : ""} onClick={() => setTab("top")}>
+              Más vendidas
+            </button>
+          </div>
+          {tab === "catalogo" && (
+            <button className="btn btn--primary" onClick={() => setModalForm({ abierto: true, producto: null })}>
+              + Nueva prenda
+            </button>
+          )}
         </div>
       </div>
 
@@ -98,12 +105,7 @@ export function Inventario() {
             </div>
           </section>
 
-          <div className="inventario__toolbar">
-            <FiltrosProductos filtro={filtro} onCambiar={setFiltro} />
-            <button className="btn btn--primary" onClick={() => setModalForm({ abierto: true, producto: null })}>
-              + Nueva prenda
-            </button>
-          </div>
+          <FiltrosProductos filtro={filtro} onCambiar={setFiltro} />
 
           {error && <p className="form-error">{error}</p>}
           {errorAccion && <p className="form-error">{errorAccion}</p>}
