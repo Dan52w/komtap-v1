@@ -23,14 +23,6 @@ fn mapear_venta(fila: &Row) -> SqlResult<Venta> {
 const COLUMNAS_VENTA: &str = "v.id, v.fecha, v.subtotal, v.descuento, v.total_neto, v.monto_pagado, v.saldo_pendiente, v.metodo_pago, v.estado_pago, v.cliente_id, c.nombre, v.referencia_cliente";
 const JOIN_CLIENTE: &str = "ventas v LEFT JOIN clientes c ON c.id = v.cliente_id";
 
-pub fn existe(conn: &Connection, venta_id: i64) -> SqlResult<bool> {
-    conn.query_row(
-        "SELECT EXISTS(SELECT 1 FROM ventas WHERE id = ?1)",
-        [venta_id],
-        |fila| fila.get(0),
-    )
-}
-
 pub fn insertar_venta(
     conn: &Connection,
     subtotal: f64,
@@ -212,6 +204,25 @@ pub fn obtener_saldo(conn: &Connection, venta_id: i64) -> SqlResult<Option<(f64,
         conn.prepare("SELECT saldo_pendiente, total_neto FROM ventas WHERE id = ?1")?;
     let mut filas = stmt.query_map([venta_id], |fila| Ok((fila.get(0)?, fila.get(1)?)))?;
     Ok(filas.next().transpose()?)
+}
+
+/// Venta completa (con el nombre del cliente si lo tiene). Se usa para
+/// conservar los datos que la edición no modifica (pagado, cliente).
+pub fn obtener(conn: &Connection, venta_id: i64) -> SqlResult<Option<Venta>> {
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {COLUMNAS_VENTA} FROM {JOIN_CLIENTE} WHERE v.id = ?1"
+    ))?;
+    let mut filas = stmt.query_map([venta_id], mapear_venta)?;
+    Ok(filas.next().transpose()?)
+}
+
+/// Suma de los abonos registrados a una venta a crédito.
+pub fn sumar_abonos(conn: &Connection, venta_id: i64) -> SqlResult<f64> {
+    conn.query_row(
+        "SELECT COALESCE(SUM(monto), 0) FROM abonos_venta WHERE venta_id = ?1",
+        [venta_id],
+        |fila| fila.get(0),
+    )
 }
 
 pub fn aplicar_abono(

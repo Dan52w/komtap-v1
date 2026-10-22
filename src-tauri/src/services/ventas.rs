@@ -122,9 +122,9 @@ pub fn crear(conn: &Connection, venta: &NuevaVenta) -> Result<i64, String> {
 
 /// Actualiza una venta existente (cabecera + ítems).
 pub fn actualizar(conn: &Connection, venta_id: i64, venta: &VentaActualizada) -> Result<(), String> {
-    if !ventas::existe(conn, venta_id).map_err(crate::errors::bd)? {
-        return Err("Venta no encontrada".to_string());
-    }
+    let actual = ventas::obtener(conn, venta_id)
+        .map_err(crate::errors::bd)?
+        .ok_or_else(|| "Venta no encontrada".to_string())?;
     if venta.items.is_empty() {
         return Err("La venta debe tener al menos un artículo".to_string());
     }
@@ -135,9 +135,20 @@ pub fn actualizar(conn: &Connection, venta_id: i64, venta: &VentaActualizada) ->
     // rechazar ediciones legítimas, aquí se valida contra el stock actual
     // más lo que la propia venta tenía reservado.
     validar_items_para_edicion(conn, venta_id, &venta.items)?;
-    validar_cliente(conn, venta.cliente_id)?;
+    // Lo que la edición no trae se conserva: el cliente y lo ya pagado no se
+    // pueden borrar por accidente desde el formulario de edición.
+    let cliente_id = venta.cliente_id.or(actual.cliente_id);
+    validar_cliente(conn, cliente_id)?;
+    // Si la venta tiene abonos registrados, lo pagado es su suma (fuente de
+    // verdad del dinero recibido); si no, se conserva lo que ya estaba.
+    let abonos = ventas::sumar_abonos(conn, venta_id).map_err(crate::errors::bd)?;
+    let monto_pagado = if abonos > 0.0 {
+        Some(abonos)
+    } else {
+        Some(venta.monto_pagado.unwrap_or(actual.monto_pagado))
+    };
 
-    let totales = calcular_totales(&venta.items, venta.descuento, venta.monto_pagado)?;
+    let totales = calcular_totales(&venta.items, venta.descuento, monto_pagado)?;
     let filas = ventas::reemplazar(
         conn,
         venta_id,
@@ -148,7 +159,7 @@ pub fn actualizar(conn: &Connection, venta_id: i64, venta: &VentaActualizada) ->
         totales.saldo_pendiente,
         &venta.metodo_pago,
         estado_pago(totales.saldo_pendiente, totales.total_neto),
-        &venta.cliente_id,
+        &cliente_id,
         &venta.referencia_cliente,
     )
     .map_err(crate::errors::bd)?;

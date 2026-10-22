@@ -18,7 +18,9 @@ pub struct Usuario {
 #[derive(Serialize, Deserialize)]
 pub struct EstadoLicencia {
     pub activa: bool,
+    #[serde(default)]
     pub tipo_licencia: Option<String>,
+    #[serde(default)]
     pub fecha_expiracion: Option<String>,
 }
 
@@ -26,11 +28,14 @@ pub struct EstadoLicencia {
 
 #[derive(Serialize, Deserialize)]
 pub struct Producto {
+    #[serde(default)]
     pub id: Option<i64>,
+    #[serde(default)]
     pub sku: Option<String>,
     pub nombre: String,
     pub categoria: String,
     pub talla: String,
+    #[serde(default)]
     pub color: Option<String>,
     pub costo_unitario: f64,
     pub precio_venta: f64,
@@ -41,12 +46,17 @@ pub struct Producto {
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct FiltroProductos {
+    #[serde(default)]
     pub categoria: Option<String>,
+    #[serde(default)]
     pub talla: Option<String>,
+    #[serde(default)]
     pub nombre: Option<String>,
     /// Código de barra / SKU. Coincidencia parcial para permitir escaneo progresivo.
+    #[serde(default)]
     pub sku: Option<String>,
     /// "agotado" | "bajo" | "disponible" | None = todos
+    #[serde(default)]
     pub estado_stock: Option<String>,
 }
 
@@ -54,26 +64,39 @@ pub struct FiltroProductos {
 
 #[derive(Serialize, Deserialize)]
 pub struct Proveedor {
+    #[serde(default)]
     pub id: Option<i64>,
     pub nombre: String,
+    #[serde(default)]
     pub telefono: Option<String>,
+    #[serde(default)]
     pub direccion: Option<String>,
+    #[serde(default)]
     pub correo: Option<String>,
+    #[serde(default)]
     pub notas: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct ItemFacturaInput {
     /// Si `producto_id` es None, se crea un producto nuevo con los datos aquí provistos.
+    #[serde(default)]
     pub producto_id: Option<i64>,
+    #[serde(default)]
     pub nombre_nuevo: Option<String>,
+    #[serde(default)]
     pub sku_nuevo: Option<String>,
+    #[serde(default)]
     pub categoria_nueva: Option<String>,
+    #[serde(default)]
     pub talla_nueva: Option<String>,
+    #[serde(default)]
     pub color_nuevo: Option<String>,
     pub cantidad: i64,
     pub costo_unitario: f64,
+    #[serde(default)]
     pub precio_venta_sugerido: Option<f64>,
+    #[serde(default)]
     pub stock_minimo_nuevo: Option<i64>,
 }
 
@@ -81,19 +104,26 @@ pub struct ItemFacturaInput {
 pub struct AbonoInput {
     pub monto: f64,
     pub metodo_pago: String,
+    #[serde(default)]
     pub banco: Option<String>,
+    #[serde(default)]
     pub numero_referencia: Option<String>,
+    #[serde(default)]
     pub nota: Option<String>,
+    #[serde(default)]
     pub fecha: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct NuevaFactura {
     pub proveedor_id: i64,
+    #[serde(default)]
     pub numero_factura: Option<String>,
     pub fecha_emision: String,
+    #[serde(default)]
     pub fecha_limite_pago: Option<String>,
     pub items: Vec<ItemFacturaInput>,
+    #[serde(default)]
     pub abono_inicial: Option<AbonoInput>,
 }
 
@@ -101,8 +131,10 @@ pub struct NuevaFactura {
 pub struct Factura {
     pub id: i64,
     pub proveedor_id: i64,
+    #[serde(default)]
     pub numero_factura: Option<String>,
     pub fecha_emision: String,
+    #[serde(default)]
     pub fecha_limite_pago: Option<String>,
     pub monto_total: f64,
     pub saldo_pendiente: f64,
@@ -116,8 +148,11 @@ pub struct AbonoProveedor {
     pub monto: f64,
     pub fecha: String,
     pub metodo_pago: String,
+    #[serde(default)]
     pub banco: Option<String>,
+    #[serde(default)]
     pub numero_referencia: Option<String>,
+    #[serde(default)]
     pub nota: Option<String>,
 }
 
@@ -128,6 +163,7 @@ pub struct ItemFacturaDetalle {
     pub producto_nombre: String,
     pub cantidad: i64,
     pub costo_unitario: f64,
+    #[serde(default)]
     pub precio_venta_sugerido: Option<f64>,
     pub subtotal: f64,
 }
@@ -146,8 +182,10 @@ pub struct FacturaPendiente {
     pub id: i64,
     pub proveedor_id: i64,
     pub proveedor_nombre: String,
+    #[serde(default)]
     pub numero_factura: Option<String>,
     pub fecha_emision: String,
+    #[serde(default)]
     pub fecha_limite_pago: Option<String>,
     pub monto_total: f64,
     pub saldo_pendiente: f64,
@@ -166,15 +204,20 @@ pub struct ItemVentaInput {
 #[derive(Serialize, Deserialize)]
 pub struct NuevaVenta {
     pub items: Vec<ItemVentaInput>,
+    #[serde(default)]
     pub descuento: Option<f64>,
     pub metodo_pago: String,
+    #[serde(default)]
     pub monto_pagado: Option<f64>, // si es None, se asume pago total del neto
     /// Cliente registrado (opcional). Si es None, puede usarse `referencia_cliente`
     /// como nota libre.
+    #[serde(default)]
     pub cliente_id: Option<i64>,
     /// Nota libre y opcional (ej. nombre/teléfono) útil solo si la venta queda
     /// con saldo pendiente y se necesita identificar a quién cobrarle luego.
+    #[serde(default)]
     pub referencia_cliente: Option<String>,
+    #[serde(default)]
     pub notas: Option<String>,
 }
 
@@ -189,8 +232,11 @@ pub struct Venta {
     pub saldo_pendiente: f64,
     pub metodo_pago: String,
     pub estado_pago: String,
+    #[serde(default)]
     pub cliente_id: Option<i64>,
+    #[serde(default)]
     pub cliente_nombre: Option<String>,
+    #[serde(default)]
     pub referencia_cliente: Option<String>,
 }
 
@@ -208,7 +254,9 @@ pub struct ItemVenta {
 pub struct AbonoVentaInput {
     pub monto: f64,
     pub metodo_pago: String,
+    #[serde(default)]
     pub numero_referencia: Option<String>,
+    #[serde(default)]
     pub nota: Option<String>,
 }
 
@@ -219,17 +267,23 @@ pub struct AbonoVenta {
     pub monto: f64,
     pub fecha: String,
     pub metodo_pago: String,
+    #[serde(default)]
     pub numero_referencia: Option<String>,
+    #[serde(default)]
     pub nota: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct VentaActualizada {
     pub items: Vec<ItemVentaInput>,
+    #[serde(default)]
     pub descuento: Option<f64>,
     pub metodo_pago: String,
+    #[serde(default)]
     pub monto_pagado: Option<f64>,
+    #[serde(default)]
     pub cliente_id: Option<i64>,
+    #[serde(default)]
     pub referencia_cliente: Option<String>,
 }
 
@@ -258,8 +312,11 @@ pub struct Gasto {
 pub struct NuevoGasto {
     pub descripcion: String,
     pub monto: f64,
+    #[serde(default)]
     pub fecha: Option<String>,
+    #[serde(default)]
     pub categoria: Option<String>,
+    #[serde(default)]
     pub metodo_pago: Option<String>,
 }
 
@@ -311,8 +368,11 @@ pub struct GastoOperativoReporte {
 
 #[derive(Serialize, Deserialize)]
 pub struct Cliente {
+    #[serde(default)]
     pub id: Option<i64>,
     pub nombre: String,
+    #[serde(default)]
     pub telefono: Option<String>,
+    #[serde(default)]
     pub notas: Option<String>,
 }

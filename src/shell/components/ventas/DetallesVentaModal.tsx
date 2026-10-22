@@ -110,6 +110,8 @@ export function DetalleVentaModal({ venta, onCerrar, onGuardado }: Props) {
         items: filas.map((f) => ({ producto_id: f.producto_id, cantidad: f.cantidad, precio_unitario: f.precio_unitario })),
         descuento,
         metodo_pago: metodo,
+        // Se reenvía el cliente actual: la edición no toca el cliente ni lo pagado.
+        cliente_id: venta.cliente_id ?? null,
         referencia_cliente: venta.referencia_cliente,
       });
       await onGuardado();

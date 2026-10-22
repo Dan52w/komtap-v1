@@ -7,16 +7,13 @@ pub struct DbConnection(pub Mutex<Connection>);
 /// Ejecuta las migraciones en orden. Son idempotentes: pueden correrse
 /// cualquier cantidad de veces sin duplicar nada.
 pub(crate) fn ejecutar_migraciones(conn: &Connection) {
-    // 001: esquema base. 002: clientes + auditoría de ajustes de stock.
-    for migracion in [
-        include_str!("migrations/001_init.sql"),
-        include_str!("migrations/002_mejoras.sql"),
-    ] {
-        conn.execute_batch(migracion)
-            .expect("error ejecutando migraciones");
-    }
+    // 001: esquema base.
+    conn.execute_batch(include_str!("migrations/001_init.sql"))
+        .expect("error ejecutando migraciones");
 
     // ALTER TABLE no soporta IF NOT EXISTS en SQLite: se verifica antes.
+    // OJO: tiene que ir ANTES de la 002, porque 002 crea el índice
+    // idx_ventas_cliente sobre esta columna.
     let tiene_cliente_id: bool = conn
         .query_row(
             "SELECT COUNT(*) > 0 FROM pragma_table_info('ventas') WHERE name = 'cliente_id'",
@@ -31,6 +28,10 @@ pub(crate) fn ejecutar_migraciones(conn: &Connection) {
         )
         .expect("error agregando columna cliente_id a ventas");
     }
+
+    // 002: clientes + auditoría de ajustes de stock (todo con IF NOT EXISTS).
+    conn.execute_batch(include_str!("migrations/002_mejoras.sql"))
+        .expect("error ejecutando migraciones");
 }
 
 pub fn init_db(app_handle: &tauri::AppHandle) -> Connection {
