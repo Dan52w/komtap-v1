@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { auth } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import { AuthCard } from "./AuthCard";
 
 export function RegistrarUsuario() {
   const { onUsuarioRegistrado } = useAuth();
@@ -47,15 +48,14 @@ export function RegistrarUsuario() {
   };
 
   return (
-    <div className="auth-card">
-      <h2>Crear usuario administrador</h2>
-      <p>Este registro solo puede hacerse una vez.</p>
+    <AuthCard titulo="Crear usuario administrador" subtitulo="Este registro solo puede hacerse una vez.">
       <form onSubmit={handleSubmit}>
         <label htmlFor="nombreCompleto">Nombre completo (opcional)</label>
         <input
           id="nombreCompleto"
           value={nombreCompleto}
           onChange={(e) => setNombreCompleto(e.target.value)}
+          autoComplete="name"
         />
 
         <label htmlFor="username">Usuario</label>
@@ -63,54 +63,65 @@ export function RegistrarUsuario() {
           id="username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
+          autoComplete="username"
           required
         />
 
-        <label htmlFor="password">Contraseña</label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        <div className="form-grid__cols-2">
+          <label htmlFor="password">Contraseña
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              required
+            />
+          </label>
+          <label htmlFor="confirmar">Confirmar contraseña
+            <input
+              id="confirmar"
+              type="password"
+              value={confirmar}
+              onChange={(e) => setConfirmar(e.target.value)}
+              autoComplete="new-password"
+              required
+            />
+          </label>
+        </div>
 
-        <label htmlFor="confirmar">Confirmar contraseña</label>
-        <input
-          id="confirmar"
-          type="password"
-          value={confirmar}
-          onChange={(e) => setConfirmar(e.target.value)}
-          required
-        />
-
-        <label htmlFor="codigoAdmin">Código para editar o eliminar ventas</label>
-        <input
-          id="codigoAdmin"
-          type="password"
-          inputMode="numeric"
-          minLength={4}
-          value={codigoAdmin}
-          onChange={(e) => setCodigoAdmin(e.target.value)}
-          required
-        />
-
-        <label htmlFor="confirmarCodigoAdmin">Confirmar código de seguridad</label>
-        <input
-          id="confirmarCodigoAdmin"
-          type="password"
-          inputMode="numeric"
-          minLength={4}
-          value={confirmarCodigoAdmin}
-          onChange={(e) => setConfirmarCodigoAdmin(e.target.value)}
-          required
-        />
+        <div className="form-grid__cols-2">
+          <label htmlFor="codigoAdmin">Código de seguridad
+            <input
+              id="codigoAdmin"
+              type="password"
+              inputMode="numeric"
+              minLength={4}
+              value={codigoAdmin}
+              onChange={(e) => setCodigoAdmin(e.target.value)}
+              placeholder="Mínimo 4 caracteres"
+              required
+            />
+          </label>
+          <label htmlFor="confirmarCodigoAdmin">Confirmar código
+            <input
+              id="confirmarCodigoAdmin"
+              type="password"
+              inputMode="numeric"
+              minLength={4}
+              value={confirmarCodigoAdmin}
+              onChange={(e) => setConfirmarCodigoAdmin(e.target.value)}
+              required
+            />
+          </label>
+        </div>
+        <p className="form-hint">El código de seguridad autoriza editar o eliminar ventas.</p>
 
         {error && <p className="form-error">{error}</p>}
-        <button type="submit" disabled={cargando}>
+        <button type="submit" className="btn btn--primary btn--block" disabled={cargando}>
           {cargando ? "Creando…" : "Crear usuario"}
         </button>
       </form>
-    </div>
+    </AuthCard>
   );
 }

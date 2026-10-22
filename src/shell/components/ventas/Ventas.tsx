@@ -25,6 +25,7 @@ export function Ventas() {
   const [cliente, setCliente] = useState("");
   const [clienteId, setClienteId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [exito, setExito] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [ventaSeleccionada, setVentaSeleccionada] = useState<Venta | null>(null);
   const carrito = useCarritoVenta();
@@ -75,8 +76,9 @@ export function Ventas() {
     }
     setGuardando(true);
     setError(null);
+    setExito(null);
     try {
-      await ventasApi.crear({
+      const ventaId = await ventasApi.crear({
         items: carrito.items.map((x) => ({
           producto_id: x.producto.id!,
           cantidad: x.cantidad,
@@ -91,6 +93,8 @@ export function Ventas() {
       setDescuento(0);
       setCliente("");
       setClienteId(null);
+      setExito(`Venta #${ventaId} registrada correctamente.`);
+      window.setTimeout(() => setExito(null), 5000);
       await cargar(); // vuelve a la primera página con la venta nueva arriba
     } catch (e) {
       setError(String(e));
@@ -110,6 +114,7 @@ export function Ventas() {
       </div>
 
       {error && <p className="form-error">{error}</p>}
+      {exito && <p className="form-ok">{exito}</p>}
 
       <div className="sales-layout">
         <section className="sale-card">

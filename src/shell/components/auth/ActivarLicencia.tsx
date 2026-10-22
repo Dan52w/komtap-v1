@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { auth } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import { AuthCard } from "./AuthCard";
 
 export function ActivarLicencia() {
   const { onLicenciaActivada } = useAuth();
@@ -23,9 +24,7 @@ export function ActivarLicencia() {
   };
 
   return (
-    <div className="auth-card">
-      <h2>Activación de licencia</h2>
-      <p>Ingresa el código de activación entregado para usar Komtap.</p>
+    <AuthCard titulo="Activación de licencia" subtitulo="Ingresa el código de activación entregado para usar Komtap.">
       <form onSubmit={handleSubmit}>
         <label htmlFor="codigo">Código de activación</label>
         <input
@@ -34,13 +33,15 @@ export function ActivarLicencia() {
           onChange={(e) => setCodigo(e.target.value)}
           placeholder="KOMTAP-XXXX-XXXX-XXXX"
           autoFocus
+          autoComplete="off"
+          spellCheck={false}
           required
         />
         {error && <p className="form-error">{error}</p>}
-        <button type="submit" disabled={cargando || !codigo.trim()}>
-          {cargando ? "Activando…" : "Activar"}
+        <button type="submit" className="btn btn--primary btn--block" disabled={cargando || !codigo.trim()}>
+          {cargando ? "Activando…" : "Activar licencia"}
         </button>
       </form>
-    </div>
+    </AuthCard>
   );
 }

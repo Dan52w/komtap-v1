@@ -14,6 +14,10 @@ function nombreRespaldo(): string {
 export function Ajustes() {
   const { licencia, refrescarLicencia } = useAuth();
   const [estadoLicencia, setEstadoLicencia] = useState<EstadoLicencia | null>(licencia);
+  // Cambio de código en dos pasos: primero se verifica el actual.
+  const [tieneCodigo, setTieneCodigo] = useState(false);
+  const [pasoCodigo, setPasoCodigo] = useState<"verificar" | "nuevo">("nuevo");
+  const [codigoActual, setCodigoActual] = useState("");
   const [codigo, setCodigo] = useState("");
   const [confirmar, setConfirmar] = useState("");
   const [mensaje, setMensaje] = useState<string | null>(null);
@@ -22,12 +26,47 @@ export function Ajustes() {
 
   useEffect(() => {
     auth.estadoLicencia().then(setEstadoLicencia).catch(() => undefined);
+    seguridad
+      .existeCodigoAdmin()
+      .then((existe) => {
+        setTieneCodigo(existe);
+        setPasoCodigo(existe ? "verificar" : "nuevo");
+      })
+      .catch(() => undefined);
   }, []);
 
   const mostrarOk = (texto: string) => {
     setMensaje(texto);
     setError(null);
     window.setTimeout(() => setMensaje(null), 4000);
+  };
+
+  const limpiarCodigo = () => {
+    setCodigoActual("");
+    setCodigo("");
+    setConfirmar("");
+  };
+
+  const verificarActual = async () => {
+    setError(null);
+    if (!codigoActual.trim()) {
+      setError("Ingresa tu código actual para continuar");
+      return;
+    }
+    setOcupado(true);
+    try {
+      const ok = await seguridad.verificarCodigoAdmin(codigoActual.trim());
+      if (!ok) {
+        setError("El código actual no es correcto");
+        return;
+      }
+      limpiarCodigo();
+      setPasoCodigo("nuevo");
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setOcupado(false);
+    }
   };
 
   const cambiarCodigo = async () => {
@@ -43,8 +82,10 @@ export function Ajustes() {
     setOcupado(true);
     try {
       await seguridad.establecerCodigoAdmin(codigo.trim());
-      setCodigo("");
-      setConfirmar("");
+      limpiarCodigo();
+      setTieneCodigo(true);
+      // Volver a pedir verificación en el próximo cambio.
+      setPasoCodigo("verificar");
       mostrarOk("Código de seguridad actualizado.");
     } catch (e) {
       setError(String(e));
@@ -122,29 +163,71 @@ export function Ajustes() {
 
         <section className="ajustes-card">
           <h3>Código de seguridad</h3>
-          <p>Protege la edición y eliminación de ventas. Solo tú lo conoces.</p>
-          <label>
-            Nuevo código
-            <input
-              type="password"
-              inputMode="numeric"
-              value={codigo}
-              onChange={(e) => setCodigo(e.target.value)}
-              placeholder="Mínimo 4 caracteres"
-            />
-          </label>
-          <label>
-            Confirmar código
-            <input
-              type="password"
-              inputMode="numeric"
-              value={confirmar}
-              onChange={(e) => setConfirmar(e.target.value)}
-            />
-          </label>
-          <button className="btn btn--primary" disabled={ocupado} onClick={() => void cambiarCodigo()}>
-            {ocupado ? "Guardando…" : "Cambiar código"}
-          </button>
+          <p>Protege la edición y eliminación de ventas. Para cambiarlo, primero confirma el código actual.</p>
+          {pasoCodigo === "verificar" ? (
+            <>
+              <label>
+                Código actual
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  value={codigoActual}
+                  onChange={(e) => setCodigoActual(e.target.value)}
+                  placeholder="Ingresa tu código actual"
+                  autoComplete="off"
+                />
+              </label>
+              {error && <p className="form-error">{error}</p>}
+              <div className="ajustes-card__acciones">
+                <button className="btn btn--primary" disabled={ocupado} onClick={() => void verificarActual()}>
+                  {ocupado ? "Verificando…" : "Verificar y continuar"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <label>
+                {tieneCodigo ? "Nuevo código" : "Crea tu código"}
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  value={codigo}
+                  onChange={(e) => setCodigo(e.target.value)}
+                  placeholder="Mínimo 4 caracteres"
+                  autoComplete="new-password"
+                />
+              </label>
+              <label>
+                Confirmar código
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  value={confirmar}
+                  onChange={(e) => setConfirmar(e.target.value)}
+                  autoComplete="new-password"
+                />
+              </label>
+              {error && <p className="form-error">{error}</p>}
+              <div className="ajustes-card__acciones">
+                <button className="btn btn--primary" disabled={ocupado} onClick={() => void cambiarCodigo()}>
+                  {ocupado ? "Guardando…" : tieneCodigo ? "Guardar nuevo código" : "Crear código"}
+                </button>
+                {tieneCodigo && (
+                  <button
+                    className="btn btn--ghost"
+                    disabled={ocupado}
+                    onClick={() => {
+                      limpiarCodigo();
+                      setError(null);
+                      setPasoCodigo("verificar");
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                )}
+              </div>
+            </>
+          )}
         </section>
 
         <section className="ajustes-card">

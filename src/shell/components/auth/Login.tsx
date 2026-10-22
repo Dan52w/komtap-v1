@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { auth } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import { AuthCard } from "./AuthCard";
 
 export function Login() {
   const { onLogin } = useAuth();
@@ -24,8 +25,7 @@ export function Login() {
   };
 
   return (
-    <div className="auth-card">
-      <h2>Iniciar sesión</h2>
+    <AuthCard titulo="Iniciar sesión" subtitulo="Bienvenido de nuevo a tu tienda.">
       <form onSubmit={handleSubmit}>
         <label htmlFor="username">Usuario</label>
         <input
@@ -33,6 +33,7 @@ export function Login() {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           autoFocus
+          autoComplete="username"
           required
         />
 
@@ -42,14 +43,15 @@ export function Login() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
           required
         />
 
         {error && <p className="form-error">{error}</p>}
-        <button type="submit" disabled={cargando}>
+        <button type="submit" className="btn btn--primary btn--block" disabled={cargando}>
           {cargando ? "Ingresando…" : "Ingresar"}
         </button>
       </form>
-    </div>
+    </AuthCard>
   );
 }
