@@ -131,7 +131,7 @@ pub fn ventas_por_metodo_pago(conn: &Connection, mes: &str) -> SqlResult<Vec<Ven
          FROM ventas WHERE substr(fecha, 1, 7) = ?1
          GROUP BY metodo_pago ORDER BY 2 DESC",
     )?;
-    Ok(stmt
+    let filas: Vec<VentasPorMetodoPago> = stmt
         .query_map([mes], |fila| {
             Ok(VentasPorMetodoPago {
                 metodo_pago: fila.get(0)?,
@@ -139,7 +139,8 @@ pub fn ventas_por_metodo_pago(conn: &Connection, mes: &str) -> SqlResult<Vec<Ven
             })
         })?
         .filter_map(|r| r.ok())
-        .collect())
+        .collect();
+    Ok(filas)
 }
 
 pub fn productos_stock_critico(conn: &Connection) -> SqlResult<Vec<ProductoCritico>> {
@@ -148,7 +149,7 @@ pub fn productos_stock_critico(conn: &Connection) -> SqlResult<Vec<ProductoCriti
          FROM productos WHERE stock_actual <= stock_minimo AND estado = 'activo'
          ORDER BY stock_actual ASC",
     )?;
-    Ok(stmt
+    let filas: Vec<ProductoCritico> = stmt
         .query_map([], |fila| {
             let stock_actual: i64 = fila.get(3)?;
             Ok(ProductoCritico {
@@ -165,7 +166,8 @@ pub fn productos_stock_critico(conn: &Connection) -> SqlResult<Vec<ProductoCriti
             })
         })?
         .filter_map(|r| r.ok())
-        .collect())
+        .collect();
+    Ok(filas)
 }
 
 /// Datos crudos para el reporte PDF mensual. La generación del PDF en sí
@@ -175,7 +177,7 @@ pub fn desglose_gastos_mes(conn: &Connection, mes: &str) -> SqlResult<Vec<GastoO
         "SELECT descripcion, monto, fecha, categoria FROM otros_gastos
          WHERE substr(fecha, 1, 7) = ?1 ORDER BY fecha DESC",
     )?;
-    Ok(stmt
+    let filas: Vec<GastoOperativoReporte> = stmt
         .query_map([mes], |fila| {
             Ok(GastoOperativoReporte {
                 descripcion: fila.get(0)?,
@@ -185,5 +187,6 @@ pub fn desglose_gastos_mes(conn: &Connection, mes: &str) -> SqlResult<Vec<GastoO
             })
         })?
         .filter_map(|r| r.ok())
-        .collect())
+        .collect();
+    Ok(filas)
 }

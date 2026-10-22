@@ -52,7 +52,9 @@ pub fn importar(conn: &mut Connection, origen: &Path) -> Result<(), String> {
         .map_err(|e| format!("Error durante la restauración: {e}"))?;
 
     // El respaldo puede venir de una versión anterior: re-ejecutar
-    // migraciones (son idempotentes).
+    // migraciones (son idempotentes). `backup` retiene &mut conn: hay que
+    // soltarlo antes de volver a usar `conn`.
+    drop(backup);
     crate::db::ejecutar_migraciones(conn);
     Ok(())
 }

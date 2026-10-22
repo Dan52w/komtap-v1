@@ -45,10 +45,11 @@ pub fn listar(conn: &Connection, mes: &str, limite: i64, offset: i64) -> SqlResu
          FROM otros_gastos WHERE substr(fecha, 1, 7) = ?1
          ORDER BY fecha DESC, id DESC LIMIT ?2 OFFSET ?3",
     )?;
-    Ok(stmt
+    let filas: Vec<Gasto> = stmt
         .query_map((mes, limite, offset), mapear)?
         .filter_map(|r| r.ok())
-        .collect())
+        .collect();
+    Ok(filas)
 }
 
 pub fn actualizar(conn: &Connection, id: i64, gasto: &GastoActualizado) -> SqlResult<usize> {

@@ -31,10 +31,11 @@ pub fn listar_proveedores(conn: &Connection) -> SqlResult<Vec<Proveedor>> {
     let mut stmt = conn.prepare(
         "SELECT id, nombre, telefono, direccion, correo, notas FROM proveedores ORDER BY nombre",
     )?;
-    Ok(stmt
+    let filas: Vec<Proveedor> = stmt
         .query_map([], mapear_proveedor)?
         .filter_map(|r| r.ok())
-        .collect())
+        .collect();
+    Ok(filas)
 }
 
 pub fn obtener_proveedor(conn: &Connection, id: i64) -> SqlResult<Option<Proveedor>> {
@@ -72,7 +73,7 @@ pub fn resumen_por_proveedor(conn: &Connection) -> SqlResult<Vec<ResumenProveedo
          GROUP BY p.id
          ORDER BY deuda_total DESC",
     )?;
-    Ok(stmt
+    let filas: Vec<ResumenProveedor> = stmt
         .query_map([], |fila| {
             Ok(ResumenProveedor {
                 proveedor_id: fila.get(0)?,
@@ -81,7 +82,8 @@ pub fn resumen_por_proveedor(conn: &Connection) -> SqlResult<Vec<ResumenProveedo
             })
         })?
         .filter_map(|r| r.ok())
-        .collect())
+        .collect();
+    Ok(filas)
 }
 
 pub fn deuda_total_global(conn: &Connection) -> SqlResult<f64> {
@@ -162,10 +164,11 @@ pub fn listar_facturas_por_proveedor(conn: &Connection, proveedor_id: i64) -> Sq
         "SELECT id, proveedor_id, numero_factura, fecha_emision, fecha_limite_pago, monto_total, saldo_pendiente, estado_pago
          FROM facturas_proveedor WHERE proveedor_id = ?1 ORDER BY fecha_emision DESC",
     )?;
-    Ok(stmt
+    let filas: Vec<Factura> = stmt
         .query_map([proveedor_id], mapear_factura)?
         .filter_map(|r| r.ok())
-        .collect())
+        .collect();
+    Ok(filas)
 }
 
 /// Todas las facturas con saldo pendiente, con el nombre del proveedor.
@@ -179,7 +182,7 @@ pub fn listar_facturas_pendientes(conn: &Connection) -> SqlResult<Vec<FacturaPen
          WHERE f.saldo_pendiente > 0
          ORDER BY f.fecha_limite_pago ASC NULLS LAST, f.fecha_emision DESC",
     )?;
-    Ok(stmt
+    let filas: Vec<FacturaPendiente> = stmt
         .query_map([], |fila| {
             Ok(FacturaPendiente {
                 id: fila.get(0)?,
@@ -194,7 +197,8 @@ pub fn listar_facturas_pendientes(conn: &Connection) -> SqlResult<Vec<FacturaPen
             })
         })?
         .filter_map(|r| r.ok())
-        .collect())
+        .collect();
+    Ok(filas)
 }
 
 pub fn obtener_saldo_factura(conn: &Connection, factura_id: i64) -> SqlResult<Option<(f64, f64)>> {
@@ -223,7 +227,7 @@ pub fn listar_items_factura(conn: &Connection, factura_id: i64) -> SqlResult<Vec
          FROM items_factura_proveedor i JOIN productos p ON p.id = i.producto_id
          WHERE i.factura_id = ?1 ORDER BY i.id",
     )?;
-    Ok(stmt
+    let filas: Vec<ItemFacturaDetalle> = stmt
         .query_map([factura_id], |fila| {
             Ok(ItemFacturaDetalle {
                 id: fila.get(0)?,
@@ -236,7 +240,8 @@ pub fn listar_items_factura(conn: &Connection, factura_id: i64) -> SqlResult<Vec
             })
         })?
         .filter_map(|r| r.ok())
-        .collect())
+        .collect();
+    Ok(filas)
 }
 
 // ===== Abonos a proveedores =====
@@ -267,7 +272,7 @@ pub fn listar_abonos_factura(conn: &Connection, factura_id: i64) -> SqlResult<Ve
         "SELECT id, factura_id, monto, fecha, metodo_pago, banco, numero_referencia, nota
          FROM abonos_proveedor WHERE factura_id = ?1 ORDER BY fecha DESC, id DESC",
     )?;
-    Ok(stmt
+    let filas: Vec<AbonoProveedor> = stmt
         .query_map([factura_id], |fila| {
             Ok(AbonoProveedor {
                 id: fila.get(0)?,
@@ -281,5 +286,6 @@ pub fn listar_abonos_factura(conn: &Connection, factura_id: i64) -> SqlResult<Ve
             })
         })?
         .filter_map(|r| r.ok())
-        .collect())
+        .collect();
+    Ok(filas)
 }

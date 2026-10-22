@@ -96,7 +96,7 @@ pub fn eliminar(conn: &Connection, producto_id: i64) -> Result<(), String> {
     let filas = productos::eliminar(conn, producto_id).map_err(|e| {
         crate::errors::base_datos(
             e,
-            "No se puede eliminar: el producto todavía tiene registros relacionados. Márquelo como inactivo.",
+            Some("No se puede eliminar: el producto todavía tiene registros relacionados. Márquelo como inactivo."),
         )
     })?;
     if filas == 0 {

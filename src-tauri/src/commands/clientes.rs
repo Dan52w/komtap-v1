@@ -48,7 +48,7 @@ pub fn eliminar_cliente(state: State<DbConnection>, cliente_id: i64) -> Result<(
     let filas = repo::eliminar(&conn, cliente_id).map_err(|e| {
         crate::errors::base_datos(
             e,
-            "No se puede eliminar el cliente: tiene registros relacionados.",
+            Some("No se puede eliminar el cliente: tiene registros relacionados."),
         )
     })?;
     if filas == 0 {

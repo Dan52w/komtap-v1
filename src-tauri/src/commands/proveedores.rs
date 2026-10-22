@@ -51,7 +51,7 @@ pub fn eliminar_proveedor(state: State<DbConnection>, proveedor_id: i64) -> Resu
     let filas = repo::eliminar_proveedor(&conn, proveedor_id).map_err(|e| {
         crate::errors::base_datos(
             e,
-            "No se puede eliminar el proveedor: tiene registros relacionados (facturas u otros datos).",
+            Some("No se puede eliminar el proveedor: tiene registros relacionados (facturas u otros datos)."),
         )
     })?;
     if filas == 0 {

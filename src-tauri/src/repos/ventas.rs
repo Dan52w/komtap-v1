@@ -98,10 +98,11 @@ pub fn listar(
          WHERE (?1 IS NULL OR substr(v.fecha, 1, 7) = ?1)
          ORDER BY v.fecha DESC LIMIT ?2 OFFSET ?3"
     ))?;
-    Ok(stmt
+    let filas: Vec<Venta> = stmt
         .query_map((mes, limite, offset), mapear_venta)?
         .filter_map(|r| r.ok())
-        .collect())
+        .collect();
+    Ok(filas)
 }
 
 pub fn listar_items(conn: &Connection, venta_id: i64) -> SqlResult<Vec<ItemVenta>> {
@@ -110,7 +111,7 @@ pub fn listar_items(conn: &Connection, venta_id: i64) -> SqlResult<Vec<ItemVenta
          FROM items_venta iv JOIN productos p ON p.id = iv.producto_id
          WHERE iv.venta_id = ?1",
     )?;
-    Ok(stmt
+    let filas: Vec<ItemVenta> = stmt
         .query_map([venta_id], |fila| {
             Ok(ItemVenta {
                 id: fila.get(0)?,
@@ -122,7 +123,8 @@ pub fn listar_items(conn: &Connection, venta_id: i64) -> SqlResult<Vec<ItemVenta
             })
         })?
         .filter_map(|r| r.ok())
-        .collect())
+        .collect();
+    Ok(filas)
 }
 
 /// Reemplaza la cabecera y los ítems de una venta existente.
@@ -188,7 +190,7 @@ pub fn listar_abonos(conn: &Connection, venta_id: i64) -> SqlResult<Vec<AbonoVen
         "SELECT id, venta_id, monto, fecha, metodo_pago, numero_referencia, nota
          FROM abonos_venta WHERE venta_id = ?1 ORDER BY fecha DESC, id DESC",
     )?;
-    Ok(stmt
+    let filas: Vec<AbonoVenta> = stmt
         .query_map([venta_id], |fila| {
             Ok(AbonoVenta {
                 id: fila.get(0)?,
@@ -201,7 +203,8 @@ pub fn listar_abonos(conn: &Connection, venta_id: i64) -> SqlResult<Vec<AbonoVen
             })
         })?
         .filter_map(|r| r.ok())
-        .collect())
+        .collect();
+    Ok(filas)
 }
 
 pub fn obtener_saldo(conn: &Connection, venta_id: i64) -> SqlResult<Option<(f64, f64)>> {
@@ -249,7 +252,7 @@ pub fn top_prendas(conn: &Connection, dias: Option<i64>, limite: i64) -> SqlResu
     );
 
     let mut stmt = conn.prepare(&sql)?;
-    Ok(stmt
+    let filas: Vec<TopPrenda> = stmt
         .query_map([limite], |fila| {
             Ok(TopPrenda {
                 producto_id: fila.get(0)?,
@@ -260,5 +263,6 @@ pub fn top_prendas(conn: &Connection, dias: Option<i64>, limite: i64) -> SqlResu
             })
         })?
         .filter_map(|r| r.ok())
-        .collect())
+        .collect();
+    Ok(filas)
 }

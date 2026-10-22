@@ -22,7 +22,8 @@ pub fn insertar(conn: &Connection, c: &Cliente) -> SqlResult<i64> {
 
 pub fn listar(conn: &Connection) -> SqlResult<Vec<Cliente>> {
     let mut stmt = conn.prepare("SELECT id, nombre, telefono, notas FROM clientes ORDER BY nombre")?;
-    Ok(stmt.query_map([], mapear)?.filter_map(|r| r.ok()).collect())
+    let filas: Vec<Cliente> = stmt.query_map([], mapear)?.filter_map(|r| r.ok()).collect();
+    Ok(filas)
 }
 
 pub fn obtener(conn: &Connection, id: i64) -> SqlResult<Option<Cliente>> {
